@@ -1,0 +1,24 @@
+PATH
+  remote: .
+  specs:
+    mb-jack-ffi (0.0.0.usegit)
+      ffi (~> 1.13.0)
+      numo-narray (~> 0.9.1)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    ffi (1.13.1)
+    numo-narray (0.9.1.9)
+    rake (13.0.1)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  bundler (~> 2.1.0)
+  mb-jack-ffi!
+  rake (~> 13.0)
+
+BUNDLED WITH
+   2.1.4
