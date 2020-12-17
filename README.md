@@ -54,7 +54,7 @@ loop do
 end
 ```
 
-Also check out `bin/loopback.rb` and `bin/invert.rb`.
+Also check out `bin/passthrough.rb` and `bin/invert.rb`.
 
 ## Testing
 
