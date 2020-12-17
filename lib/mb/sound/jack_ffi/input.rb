@@ -33,8 +33,21 @@ module MB
         def read(_ignored = nil)
           @jack_ffi.read_ports(@ports)
         end
-      end
 
+        # Connects this input object's port with the given name or at the given
+        # index to the given JACK output port.
+        def connect(name_or_index, output_port_name)
+          if name_or_index.is_a?(Integer)
+            port = @ports[name_or_index]
+          else
+            port = @ports.find(name_or_index)
+          end
+
+          raise "Port #{name_or_index} not found on this input object" unless port
+
+          @jack_ffi.connect_ports(output_port_name, port)
+        end
+      end
     end
   end
 end

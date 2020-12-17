@@ -141,6 +141,12 @@ module MB
       #                 risk of dropouts).  Default is INPUT_QUEUE_SIZE.  Sane
       #                 values range from 1 to 4.
       def input(channels: nil, port_names: 'in', connections: nil, queue_size: nil)
+        # TODO: connections thoughts:
+        # :physical to connect to all physical recording ports (then channels not required)
+        # String to connect to all output ports on a named client (then channels not required)
+        # An Array of full port names (then channels not required), where each
+        # element could be an array to create multiple connections
+
         create_io(
           channels: channels,
           port_names: port_names,
@@ -190,9 +196,15 @@ module MB
       #     # Find all physical playback ports (they are "inputs" within JACK,
       #     # outputs on the hardware)
       #     MB::Sound::JackFFI[].find_ports(flags: [:JackPortIsInput, :JackPortIsPhysical])
+      #     # => ["system:playback_1", ...]
       #
       #     # Find all ports on a named client
       #     MB::Sound::JackFFI[].find_ports('^some_client_name:')
+      #     # => ["some_client_name:in_1", ...]
+      #
+      #     # Find all ports
+      #     MB::Sound::JackFFI[].find_ports
+      #     # => [...]
       def find_ports(name_regex = nil, flags: 0)
         port_names = Jack.jack_get_ports(@client, name_regex, Jack::AUDIO_TYPE, flags || 0)
         return [] if port_names.nil? || port_names.null?
@@ -209,6 +221,19 @@ module MB
       ensure
         Jack.jack_free(port_names) unless port_names.nil? || port_names.null?
       end
+
+      # Connects any JACK input port (not just from this client) to any output
+      # port by name.  If names do not include a client name (if they do not
+      # contain a colon ':' character), then they will be prefixed with the
+      # name of this client.
+      def connect_ports(source_port, destination_port)
+        source_port = "#{@client_name}:#{source_port}" unless source_port.include?(':')
+        destination_port = "#{@client_name}:#{destination_port}" unless destination_port.include?(':')
+        result = Jack.jack_connect(@client, source_port, destination_port)
+        raise "Error connecting #{source_port.inspect} to #{destination_port.inspect}: #{result}" if result != 0
+      end
+
+      # TODO: Disconnection?  Need to think about ideal API
 
       # Internal API used by JackFFI::Input#close and JackFFI::Output#close.
       # Removes all of a given input's or output's ports from the client.
