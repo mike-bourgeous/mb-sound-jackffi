@@ -181,8 +181,10 @@ module MB
       # returned.  If +flags+ is 0, an empty array, or nil, then all ports
       # matching the given regex will be returned.
       #
-      # Returns an Array of Strings with port names, which will be empty if
-      # there were no matching ports found (or if JACK encountered an error).
+      # Returns an Array of Strings with port names, sorted by client name
+      # (JACK's port order within a client will be preserved).  The Array will
+      # be empty if there were no matching ports found (or if JACK encountered
+      # an error).
       #
       # JACK full port names look like "client_name:port_name".
       #
@@ -217,7 +219,7 @@ module MB
           current_name += FFI::Type::POINTER.size
         end
 
-        ports
+        ports.sort_by! { |name| name.split(':', 2)[0] }
       ensure
         Jack.jack_free(port_names) unless port_names.nil? || port_names.null?
       end
