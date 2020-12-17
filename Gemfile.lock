@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    mb-jack-ffi (0.0.0.usegit)
+    mb-jack-ffi (0.0.1.usegit)
       ffi (~> 1.13.0)
       numo-narray (~> 0.9.1)
 
