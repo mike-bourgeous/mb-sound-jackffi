@@ -14,6 +14,12 @@ module MB
     #     MB::Sound::JackFFI[].input(channels: 2)
     #
     #     # TODO: examples, and make sure they work
+    #
+    #
+    #
+    # TODO: Maybe split into separate files
+    # TODO: Maybe support environment variables for client name, server name, port names, etc.
+    # TODO: Support connecting ports after creating them
     class JackFFI
       # The default size of the buffer queues for communicating between Ruby and
       # JACK.  This is separate from JACK's own internal buffers.  The

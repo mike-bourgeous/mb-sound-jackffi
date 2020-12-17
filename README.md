@@ -53,6 +53,8 @@ loop do
 end
 ```
 
+Also check out `bin/loopback.rb` and `bin/invert.rb`.
+
 ## Testing
 
 Testing is mostly manual.  I might eventually figure out a way to install jackd
