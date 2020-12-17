@@ -48,7 +48,9 @@ require 'mb-jack-ffi' # Or 'mb/sound/jack_ffi'
 
 # Enjoy silence
 out = MB::Sound::JackFFI[client_name: 'my app'].output(port_names: ['left', 'right'])
-loop do out.write([Numo::SFloat.zeros(out.buffer_size)] * out.channels) end
+loop do
+  out.write([Numo::SFloat.zeros(out.buffer_size)] * out.channels)
+end
 ```
 
 ## Testing
@@ -67,6 +69,5 @@ This project is released under a 2-clause BSD license.  See the LICENSE file.
 
 
 [0]: https://www.youtube.com/playlist?list=PLpRqC8LaADXnwve3e8gI239eDNRO3Nhya
-[1]: https://www.youtube.com/playlist?list=PLpRqC8LaADXlYhKRTwSpdW3ineaQnM9zK
-[2]: https://
-[3]: https://ccrma.stanford.edu/~jos/#books
+[1]: https://jackaudio.org
+[2]: https://github.com/mike-bourgeous/mb-sound
