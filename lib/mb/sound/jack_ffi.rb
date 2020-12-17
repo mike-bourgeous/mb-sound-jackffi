@@ -2,6 +2,8 @@ require 'forwardable'
 require 'numo/narray'
 
 require_relative 'jack_ffi/jack'
+require_relative 'jack_ffi/input'
+require_relative 'jack_ffi/output'
 
 module MB
   module Sound
@@ -16,9 +18,6 @@ module MB
     #
     #     # TODO: examples, and make sure they work
     #
-    #
-    #
-    # TODO: Maybe split into separate files
     # TODO: Maybe support environment variables for client name, server name, port names, etc.
     # TODO: Support connecting ports after creating them
     class JackFFI
@@ -28,72 +27,6 @@ module MB
       # defaults.
       INPUT_QUEUE_SIZE = 2
       OUTPUT_QUEUE_SIZE = 2
-
-      # Returned by JackFFI#input.  E.g. use JackFFI[client_name: 'my
-      # client'].input(channels: 2) to get two input ports on the client.
-      class Input
-        extend Forwardable
-
-        def_delegators :@jack_ffi, :buffer_size, :rate
-
-        attr_reader :channels, :ports
-
-        # Called by JackFFI to initialize an audio input handle.  You generally
-        # won't use this constructor directly.  Instead use JackFFI#input.
-        #
-        # +:jack_ffi+ - The JackFFI instance that contains this input.
-        # +:ports+ - An Array of JACK port names.
-        def initialize(jack_ffi:, ports:)
-          @jack_ffi = jack_ffi
-          @ports = ports
-          @channels = ports.length
-        end
-
-        # Removes this input object's ports from the client.
-        def close
-          @jack_ffi.remove(self)
-        end
-
-        # Reads one #buffer_size buffer of frames as an Array of Numo::SFloat.
-        # Any frame count parameter is ignored, as JACK operates in lockstep with
-        # a fixed buffer size.  The returned Array will have one element for each
-        # input port.
-        def read(_ignored = nil)
-          @jack_ffi.read_ports(@ports)
-        end
-      end
-
-      # Returned by JackFFI#output.  E.g. use JackFFI[client_name: 'my
-      # client'].output(channels: 2) to get two output ports on the client.
-      class Output
-        extend Forwardable
-
-        def_delegators :@jack_ffi, :buffer_size, :rate
-
-        attr_reader :channels, :ports
-
-        # Called by JackFFI to initialize an audio output handle.  You generally
-        # won't use this constructor directly.  Instead use JackFFI#output.
-        #
-        # +:jack_ffi+ - The JackFFI instance that contains this output.
-        # +:ports+ - An Array of JACK port names.
-        def initialize(jack_ffi:, ports:)
-          @jack_ffi = jack_ffi
-          @ports = ports
-          @channels = ports.length
-        end
-
-        # Removes this output object's ports from the client.
-        def close
-          @jack_ffi.remove(self)
-        end
-
-        # Writes the given Array of data (Numo::SFloat recommended).  The Array
-        # should contain one element for each output port.
-        def write(data)
-          @jack_ffi.write_ports(@ports, data)
-        end
-      end
 
       # Retrieves a base client instance for the given client name and server
       # name.
