@@ -1,13 +1,13 @@
 # coding: utf-8
 
 Gem::Specification.new do |spec|
-  spec.name          = "mb-jack-ffi"
-  spec.version       = '0.0.1.usegit'
+  spec.name          = "mb-sound-jackffi"
+  spec.version       = '0.0.2.usegit'
   spec.authors       = ["Mike Bourgeous"]
   spec.email         = ["mike@mikebourgeous.com"]
 
   spec.summary       = %q{A Ruby FFI interface to the JACK Audio Connection Kit}
-  spec.homepage      = "https://github.com/mike-bourgeous/mb-jack-ffi"
+  spec.homepage      = "https://github.com/mike-bourgeous/mb-sound-jackffi"
 
   # Prevent pushing this gem to RubyGems.org. To allow pushes either set the 'allowed_push_host'
   # to allow pushing to a single host or delete this section to allow pushing to any host.

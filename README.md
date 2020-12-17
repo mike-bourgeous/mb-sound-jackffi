@@ -1,4 +1,4 @@
-# mb-jack-ffi
+# mb-sound-jackffi
 
 An *UNSTABLE* (as in it occasionally crashes, hangs, or drops audio) Ruby FFI
 interface for the [JACK Audio Connection Kit][1].  I've only tested this on
@@ -34,7 +34,7 @@ Finally, you can add the Gem (via Git) to your Gemfile:
 
 ```ruby
 # your-project/Gemfile
-gem 'mb-jack-ffi', git: 'git@github.com:mike-bourgeous/mb-jack-ffi.git'
+gem 'mb-sound-jackffi', git: 'git@github.com:mike-bourgeous/mb-sound-jackffi.git'
 ```
 
 ## Examples
@@ -44,7 +44,7 @@ specific client name.  Its `input` and `output` instance methods will create
 input or output ports on the JACK client.
 
 ```ruby
-require 'mb-jack-ffi' # Or 'mb/sound/jack_ffi'
+require 'mb-sound-jackffi' # Or 'mb/sound/jack_ffi'
 
 # Enjoy silence
 out = MB::Sound::JackFFI[client_name: 'my app'].output(port_names: ['left', 'right'])

@@ -2,7 +2,7 @@
 # Passes audio directly from input ports to output ports unmodified.
 
 require "bundler/setup"
-require 'mb-jack-ffi'
+require 'mb-sound-jackffi'
 
 channels = ARGV[0]&.to_i || 2
 puts "Running with #{channels} channels"

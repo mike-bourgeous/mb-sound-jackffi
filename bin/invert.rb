@@ -3,7 +3,7 @@
 # phase inversion.
 
 require "bundler/setup"
-require 'mb-jack-ffi'
+require 'mb-sound-jackffi'
 
 channels = ARGV[0]&.to_i || 2
 puts "Running with #{channels} channels"
