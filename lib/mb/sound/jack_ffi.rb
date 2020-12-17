@@ -72,8 +72,8 @@ module MB
 
         # Montonically increasing indices used to number prefix-named ports.
         @port_indices = {
-          JackPortIsInput: 0,
-          JackPortIsOutput: 0,
+          JackPortIsInput: 1,
+          JackPortIsOutput: 1,
         }
 
         @init_mutex = Mutex.new
