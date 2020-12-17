@@ -90,6 +90,10 @@ module MB
         attach_function :jack_port_register, [:jack_client, :string, :string, :jack_port_flags, :ulong], :jack_port
         attach_function :jack_port_unregister, [:jack_client, :jack_port], :int
         attach_function :jack_port_get_buffer, [:jack_port, :jack_nframes_t], :pointer
+        attach_function :jack_get_ports, [:jack_client, :string, :string, :jack_port_flags], :pointer
+
+        # Other functions
+        attach_function :jack_free, [:pointer], :void
       end
     end
   end

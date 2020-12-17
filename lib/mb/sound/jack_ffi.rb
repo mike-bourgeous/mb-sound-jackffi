@@ -169,6 +169,47 @@ module MB
         )
       end
 
+      # Finds audio ports with names matching the given regular expression, and
+      # having the given set of JACK port flags.  If the +name_regex+ is nil or
+      # an empty string, then all ports matching the given flags will be
+      # returned.  If +flags+ is 0, an empty array, or nil, then all ports
+      # matching the given regex will be returned.
+      #
+      # Returns an Array of Strings with port names, which will be empty if
+      # there were no matching ports found (or if JACK encountered an error).
+      #
+      # JACK full port names look like "client_name:port_name".
+      #
+      # +name_regex+ - A regular expression string, or nil to skip filtering by name.
+      # +:flags+ - For filtering by flags: an Array of symbols from the
+      #            :jack_port_flags enum, or an Integer value with flags ORed
+      #            together.  To skip filtering by flags: 0, nil, or [].
+      #
+      # Examples:
+      #
+      #     # Find all physical playback ports (they are "inputs" within JACK,
+      #     # outputs on the hardware)
+      #     MB::Sound::JackFFI[].find_ports(flags: [:JackPortIsInput, :JackPortIsPhysical])
+      #
+      #     # Find all ports on a named client
+      #     MB::Sound::JackFFI[].find_ports('^some_client_name:')
+      def find_ports(name_regex = nil, flags: 0)
+        port_names = Jack.jack_get_ports(@client, name_regex, Jack::AUDIO_TYPE, flags || 0)
+        return [] if port_names.nil? || port_names.null?
+
+        ports = []
+
+        current_name = FFI::Pointer.new(port_names)
+        while !current_name.read_pointer.null?
+          ports << current_name.read_pointer.read_string
+          current_name += FFI::Type::POINTER.size
+        end
+
+        ports
+      ensure
+        Jack.jack_free(port_names) unless port_names.nil? || port_names.null?
+      end
+
       # Internal API used by JackFFI::Input#close and JackFFI::Output#close.
       # Removes all of a given input's or output's ports from the client.
       def remove(input_or_output)
