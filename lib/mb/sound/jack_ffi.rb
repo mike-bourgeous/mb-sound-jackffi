@@ -406,7 +406,7 @@ module MB
             io: io,
             port_id: port_id,
             queue: SizedQueue.new(queue_size),
-            drops: 0
+            drops: -1
           }
         end
 
@@ -453,7 +453,7 @@ module MB
             if queue.length == queue.max
               log "Input port #{name} buffer queue is full" if port_info[:drops] == 0
               queue.pop rescue nil
-              port_info[:drops] += 1
+              port_info[:drops] += 1 unless port_info[:drops] < 0
             else
               log "Input port #{name} buffer queue recovered after #{port_info[:drops]} dropped buffers" if port_info[:drops] > 0
               port_info[:drops] = 0
@@ -467,7 +467,7 @@ module MB
             data = queue.pop(true) rescue nil unless queue.empty?
             if data.nil?
               log "Output port #{name} ran out of data to write" if port_info[:drops] == 0
-              port_info[:drops] += 1
+              port_info[:drops] += 1 unless port_info[:drops] < 0
               data = @zero
             else
               log "Output port #{name} recovered after #{port_info[:drops]} dropped buffers" if port_info[:drops] > 0
