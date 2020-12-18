@@ -359,7 +359,7 @@ module MB
           raise ":connect must be a String or an Array, or the special value :physical"
         end
 
-        channels ||= connect.count
+        channels ||= connect&.count
 
         case port_names
         when Array
