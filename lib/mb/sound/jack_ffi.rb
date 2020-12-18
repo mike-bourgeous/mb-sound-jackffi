@@ -46,7 +46,7 @@ module MB
         @instances.reject! { |k, v| v == jack_ffi }
       end
 
-      attr_reader :client_name, :server_name, :buffer_size, :rate
+      attr_reader :client_name, :server_name, :buffer_size, :rate, :inputs, :outputs
 
       # Generally you don't need to create a JackFFI instance yourself.  Instead,
       # use JackFFI[] (the array indexing operator) to retrieve a connection, and
@@ -69,6 +69,9 @@ module MB
         # Port maps use the port name as key, with a Hash as value.  See #create_io.
         @input_ports = {}
         @output_ports = {}
+
+        @inputs = []
+        @outputs = []
 
         # Montonically increasing indices used to number prefix-named ports.
         @port_indices = {
@@ -155,7 +158,7 @@ module MB
           jack_direction: :JackPortIsInput,
           queue_size: queue_size || INPUT_QUEUE_SIZE,
           io_class: Input
-        )
+        ).tap { |io| @inputs << io }
       end
 
       # Returns a new JackFFI::Input and creates corresponding new input ports on
@@ -172,7 +175,7 @@ module MB
           jack_direction: :JackPortIsOutput,
           queue_size: queue_size || OUTPUT_QUEUE_SIZE,
           io_class: Output
-        )
+        ).tap { |io| @outputs << io }
       end
 
       # Finds audio ports with names matching the given regular expression, and
@@ -243,9 +246,11 @@ module MB
         case input_or_output
         when Input
           portmap = @input_ports
+          @inputs.delete(input_or_output)
 
         when Output
           portmap = @output_ports
+          @outputs.delete(input_or_output)
         end
 
         input_or_output.ports.each do |name|
