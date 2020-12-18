@@ -47,6 +47,34 @@ module MB
 
           @jack_ffi.connect_ports(output_port_name, port)
         end
+
+        # Connects this input's ports to the output ports on the given client
+        # name if given a String, or to the given list of ports (which may
+        # contain nested arrays to connect one port to multiple ports, or nil
+        # to skip wiring a port).  If there are too many or too few ports, then
+        # extra ports on either side will be left unconnected.
+        def connect_all(client_name_or_ports)
+          case client_name_or_ports
+          when String
+            raise 'Client name to connect must not include a colon' if client_name_or_ports.include?(':')
+            new_ports = @jack_ffi.find_ports("^#{client_name_or_ports}:", flags: :JackPortIsOutput)
+
+          when Array
+            new_ports = client_name_or_ports
+
+          else
+            raise 'Pass an Array of port names (which may contain nested Arrays) or a String client name'
+          end
+
+          [new_ports.length, @ports.length].min.times do |idx|
+            output = new_ports[idx]
+            input = @ports[idx]
+
+            next if output.nil?
+
+            @jack_ffi.connect_ports(output, input)
+          end
+        end
       end
     end
   end

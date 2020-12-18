@@ -129,31 +129,37 @@ module MB
       # the JACK client.
       #
       # If +:port_names+ is a String, then it is used as a prefix to create
-      # +channels+ numbered ports.  If +:port_names+ is an Array of Strings, then
-      # those port names will be created directly without numbering.
+      # +:channels+ numbered ports.  If +:port_names+ is an Array of Strings,
+      # then those port names will be created directly without numbering.
+      #
+      # If +:connect+ is specified, then +:channels+ may be omitted and the
+      # number of connection ports will be used as the number of channels to
+      # create.  If an Array of port names is specified, then all of those
+      # ports will be created regardless of the number of +:connect+.
       #
       # Port names must be unique.
       #
-      # +:channels+ - The number of ports to create if +:port_names+ is a String.
+      # See the JackFFI class documentation for examples.
+      #
+      # +:channels+ - The number of ports to create if +:port_names+ is a
+      #               String.  This may be omitted if :connect is provided.
       # +:port_names+ - A String (without a trailing underscore) to create
       #                 prefixed and numbered ports, or an Array of Strings to
       #                 create a list of ports directly by name.
-      # +:connections+ - TODO (maybe String client name, maybe list of ports)
+      # +:connect+ - A String with a single port name like "client:port", a
+      #              String with a client name like "system", an Array of port
+      #              name strings like +["system:playback_1",
+      #              "system:playback_4"]+, or the Symbol :physical to connect
+      #              to all available physical recording ports.
       # +:queue_size+ - Optional: number of audio buffers to hold between Ruby
       #                 and the JACK thread (higher means more latency but less
       #                 risk of dropouts).  Default is INPUT_QUEUE_SIZE.  Sane
       #                 values range from 1 to 4.
-      def input(channels: nil, port_names: 'in', connections: nil, queue_size: nil)
-        # TODO: connections thoughts:
-        # :physical to connect to all physical recording ports (then channels not required)
-        # String to connect to all output ports on a named client (then channels not required)
-        # An Array of full port names (then channels not required), where each
-        # element could be an array to create multiple connections
-
+      def input(channels: nil, port_names: 'in', connect: nil, queue_size: nil)
         create_io(
           channels: channels,
           port_names: port_names,
-          connections: connections,
+          connect: connect,
           portmap: @input_ports,
           jack_direction: :JackPortIsInput,
           queue_size: queue_size || INPUT_QUEUE_SIZE,
@@ -164,13 +170,17 @@ module MB
       # Returns a new JackFFI::Input and creates corresponding new input ports on
       # the JACK client.
       #
-      # Parameters are the same as for #input, with the default for +:queue_size+
-      # being OUTPUT_QUEUE_SIZE.
-      def output(channels: nil, port_names: 'out', connections: nil, queue_size: nil)
+      # Parameters are the same as for #input, but with the default for
+      # +:queue_size+ being OUTPUT_QUEUE_SIZE, and with :connect connecting to
+      # playback ports (instead of recording ports) for the special value
+      # :physical.
+      #
+      # See the JackFFI class documentation for examples.
+      def output(channels: nil, port_names: 'out', connect: nil, queue_size: nil)
         create_io(
           channels: channels,
           port_names: port_names,
-          connections: connections,
+          connect: connect,
           portmap: @output_ports,
           jack_direction: :JackPortIsOutput,
           queue_size: queue_size || OUTPUT_QUEUE_SIZE,
@@ -191,7 +201,8 @@ module MB
       #
       # JACK full port names look like "client_name:port_name".
       #
-      # +name_regex+ - A regular expression string, or nil to skip filtering by name.
+      # +name_regex+ - A regular expression string, or nil to skip filtering by
+      #                name.
       # +:flags+ - For filtering by flags: an Array of symbols from the
       #            :jack_port_flags enum, or an Integer value with flags ORed
       #            together.  To skip filtering by flags: 0, nil, or [].
@@ -210,6 +221,10 @@ module MB
       #     # Find all ports
       #     MB::Sound::JackFFI[].find_ports
       #     # => [...]
+      #
+      # TODO: I don't like using a flags: parameter as that leaks some ugly
+      # details of the FFI API.  I'd rather have separate named parameters for
+      # each important flag.
       def find_ports(name_regex = nil, flags: 0)
         port_names = Jack.jack_get_ports(@client, name_regex, Jack::AUDIO_TYPE, flags || 0)
         return [] if port_names.nil? || port_names.null?
@@ -230,12 +245,24 @@ module MB
       # Connects any JACK input port (not just from this client) to any output
       # port by name.  If names do not include a client name (if they do not
       # contain a colon ':' character), then they will be prefixed with the
-      # name of this client.
+      # name of this client.  Either parameter may be an Array to specify more
+      # than one port.  If both parameters are Arrays, then every source port
+      # will be wired to every destination port.
       def connect_ports(source_port, destination_port)
-        source_port = "#{@client_name}:#{source_port}" unless source_port.include?(':')
-        destination_port = "#{@client_name}:#{destination_port}" unless destination_port.include?(':')
-        result = Jack.jack_connect(@client, source_port, destination_port)
-        raise "Error connecting #{source_port.inspect} to #{destination_port.inspect}: #{result}" if result != 0
+        if source_port.is_a?(Array)
+          source_port.each do |src|
+            connect_ports(src, destination_port)
+          end
+        elsif destination_port.is_a?(Array)
+          destination_port.each do |dest|
+            connect_ports(source_port, dest)
+          end
+        else
+          source_port = "#{@client_name}:#{source_port}" unless source_port.include?(':')
+          destination_port = "#{@client_name}:#{destination_port}" unless destination_port.include?(':')
+          result = Jack.jack_connect(@client, source_port, destination_port)
+          raise "Error connecting #{source_port.inspect} to #{destination_port.inspect}: #{result}" if result != 0
+        end
       end
 
       # TODO: Disconnection?  Need to think about ideal API
@@ -306,15 +333,39 @@ module MB
       private
 
       # Common code for creating ports shared by #input and #output.  API subject to change.
-      def create_io(channels:, port_names:, connections:, portmap:, jack_direction:, queue_size:, io_class:)
+      def create_io(channels:, port_names:, connect:, portmap:, jack_direction:, queue_size:, io_class:)
         raise "Queue size must be positive" if queue_size <= 0
+
+        # Find the number of connections, if given, in case channel count wasn't specified
+        other_direction = jack_direction == :JackPortIsInput ? :JackPortIsOutput : :JackPortIsInput
+        case connect
+        when :physical
+          # Connect to all physical ports
+          connect = find_ports(flags: [:JackPortIsPhysical, other_direction])
+
+        when /:/
+          # Connect to a single port
+          connect = [connect]
+
+        when String
+          # Connect to as many ports as possible on a named client
+          connect = find_ports("^#{connect}:", flags: [other_direction])
+
+        when Array, nil
+          # Array of port names or no connections; do nothing
+
+        else
+          raise ":connect must be a String or an Array, or the special value :physical"
+        end
+
+        channels ||= connect.count
 
         case port_names
         when Array
-          raise "Do not specify a channel count when an array of port names is given" if channels
+          raise "Do not specify :channels when an array of port names is given" if channels && !connect
 
         when String
-          raise "Channel count must be given for prefix-named ports" unless channels.is_a?(Integer)
+          raise ":channels or :connect must be given for prefix-named ports" unless channels.is_a?(Integer)
 
           port_names = channels.times.map { |c|
             "#{port_names}_#{@port_indices[jack_direction]}".tap { @port_indices[jack_direction] += 1 }
@@ -322,6 +373,10 @@ module MB
 
         else
           raise "Pass a String or an Array of Strings for :port_names (received #{port_names.class})"
+        end
+
+        if port_names.empty?
+          raise "No ports were provided, no connections were possible, and/or no channel count was given"
         end
 
         port_names.each do |name|
@@ -359,8 +414,8 @@ module MB
           portmap[port_info[:name]] = port_info
         end
 
-        # TODO Connections
-        raise NotImplementedError if connections
+        # TODO: Special connection types like :physical, channel counts based on connection list
+        io.connect_all(connect) if connect
 
         io
       end
