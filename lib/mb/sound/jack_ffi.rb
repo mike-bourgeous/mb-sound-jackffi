@@ -301,7 +301,8 @@ module MB
       end
 
       # Writes the given +data+ to the ports represented by the given Array of
-      # port IDs.  Used internally by JackFFI::Output.
+      # port IDs.  Returns the number of samples written per channel.  Used
+      # internally by JackFFI::Output.
       def write_ports(ports, data)
         raise "JACK connection is closed" unless @run
 
@@ -315,7 +316,7 @@ module MB
           @output_ports[name][:queue].push(data[idx])
         end
 
-        nil
+        @buffer_size
       end
 
       # Reads one buffer_size chunk of data for the given Array of port IDs.
