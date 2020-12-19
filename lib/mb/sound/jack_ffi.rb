@@ -25,8 +25,16 @@ module MB
       # JACK.  This is separate from JACK's own internal buffers.  The
       # :queue_size parameter to #input and #output allows overriding these
       # defaults.
-      INPUT_QUEUE_SIZE = 2
-      OUTPUT_QUEUE_SIZE = 2
+      DEFAULT_QUEUE_SIZE = {
+        :JackPortIsInput => {
+          Jack::AUDIO_TYPE => 2,
+          Jack::MIDI_TYPE => 1000,
+        },
+        :JackPortIsOutput => {
+          Jack::AUDIO_TYPE => 2,
+          Jack::MIDI_TYPE => 1000,
+        },
+      }
 
       # Retrieves a base client instance for the given client name and server
       # name.
@@ -35,6 +43,7 @@ module MB
       # JACK, the client name will be changed by JACK.  Use JackFFI#client_name
       # to get the true client name if needed.
       def self.[](client_name: 'ruby', server_name: nil)
+        # TODO: Maybe the default client name should be File.basename($0).gsub(':', '_')
         @instances ||= {}
         @instances[name] ||= new(client_name: client_name, server_name: server_name)
       end
@@ -153,16 +162,17 @@ module MB
       #              to all available physical recording ports.
       # +:queue_size+ - Optional: number of audio buffers to hold between Ruby
       #                 and the JACK thread (higher means more latency but less
-      #                 risk of dropouts).  Default is INPUT_QUEUE_SIZE.  Sane
-      #                 values range from 1 to 4.
-      def input(channels: nil, port_names: 'in', connect: nil, queue_size: nil)
+      #                 risk of dropouts).  See DEFAULT_QUEUE_SIZE for
+      #                 defaults.  Sane values range from 1 to 4 for audio.
+      def input(channels: nil, port_names: 'in', port_type: :audio, connect: nil, queue_size: nil)
         create_io(
           channels: channels,
           port_names: port_names,
           connect: connect,
           portmap: @input_ports,
+          port_type: port_type,
           jack_direction: :JackPortIsInput,
-          queue_size: queue_size || INPUT_QUEUE_SIZE,
+          queue_size: queue_size,
           io_class: Input
         ).tap { |io| @inputs << io }
       end
@@ -176,14 +186,15 @@ module MB
       # :physical.
       #
       # See the JackFFI class documentation for examples.
-      def output(channels: nil, port_names: 'out', connect: nil, queue_size: nil)
+      def output(channels: nil, port_names: 'out', port_type: :audio, connect: nil, queue_size: nil)
         create_io(
           channels: channels,
           port_names: port_names,
           connect: connect,
           portmap: @output_ports,
+          port_type: port_type,
           jack_direction: :JackPortIsOutput,
-          queue_size: queue_size || OUTPUT_QUEUE_SIZE,
+          queue_size: queue_size,
           io_class: Output
         ).tap { |io| @outputs << io }
       end
@@ -201,8 +212,12 @@ module MB
       #
       # JACK full port names look like "client_name:port_name".
       #
-      # +name_regex+ - A regular expression string, or nil to skip filtering by
-      #                name.
+      # +name_regex+ - A regular expression (as String) to use for filtering
+      #                port names, or nil to skip filtering by name.
+      # +:port_type+ - A regular expression (as String) to use for filtering
+      #                port types, or nil to return all types.  You may also
+      #                pass :audio for audio, or :midi for MIDI.  Defaults to
+      #                :audio.  See Jack::PORT_TYPES.
       # +:flags+ - For filtering by flags: an Array of symbols from the
       #            :jack_port_flags enum, or an Integer value with flags ORed
       #            together.  To skip filtering by flags: 0, nil, or [].
@@ -211,7 +226,7 @@ module MB
       #
       #     # Find all physical playback ports (they are "inputs" within JACK,
       #     # outputs on the hardware)
-      #     MB::Sound::JackFFI[].find_ports(flags: [:JackPortIsInput, :JackPortIsPhysical])
+      #     MB::Sound::JackFFI[].find_ports(input: true, physical: true)
       #     # => ["system:playback_1", ...]
       #
       #     # Find all ports on a named client
@@ -225,8 +240,19 @@ module MB
       # TODO: I don't like using a flags: parameter as that leaks some ugly
       # details of the FFI API.  I'd rather have separate named parameters for
       # each important flag.
-      def find_ports(name_regex = nil, flags: 0)
-        port_names = Jack.jack_get_ports(@client, name_regex, Jack::AUDIO_TYPE, flags || 0)
+      def find_ports(name_regex = nil, port_type: :audio, input: nil, output: nil, physical: nil)
+        flags = []
+        flags << :JackPortIsInput if input
+        flags << :JackPortIsOutput if output
+        flags << :JackPortIsPhysical if physical
+
+        if port_type.is_a?(Symbol)
+          type_regex = Jack::PORT_TYPES[port_type] || raise("Invalid port type #{port_type}")
+        else
+          type_regex = port_type
+        end
+
+        port_names = Jack.jack_get_ports(@client, name_regex, type_regex, flags)
         return [] if port_names.nil? || port_names.null?
 
         ports = []
@@ -300,9 +326,12 @@ module MB
         }
       end
 
+      # Used internally by JackFFI::Output.
+      #
       # Writes the given +data+ to the ports represented by the given Array of
-      # port IDs.  Returns the number of samples written per channel.  Used
-      # internally by JackFFI::Output.
+      # port IDs.  Returns the number of samples written per channel for audio
+      # ports, or however many groups of MIDI events were written to the first
+      # port for MIDI ports.
       def write_ports(ports, data)
         raise "JACK connection is closed" unless @run
 
@@ -313,16 +342,22 @@ module MB
         raise "Output buffer must be #{@buffer_size} samples long" unless data.all? { |c| c.length == @buffer_size }
 
         ports.each_with_index do |name, idx|
+          info = @output_ports[name]
+
           d = data[idx]
-          d = Numo::SFloat.cast(d) unless d.is_a?(Numo::SFloat) # must pass 32-bit floats to JACK
-          @output_ports[name][:queue].push(d)
+          if info[:port_type] == Jack::AUDIO_TYPE && !d.is_a?(Numo::SFloat)
+            d = Numo::SFloat.cast(d) # must pass 32-bit floats to JACK
+          end
+
+          info[:queue].push(d)
         end
 
-        @buffer_size
+        data[0].length
       end
 
-      # Reads one buffer_size chunk of data for the given Array of port IDs.
       # This is generally for internal use by the JackFFI::Input class.
+      #
+      # Reads one buffer_size chunk of data for the given Array of port IDs.
       def read_ports(ports)
         raise "JACK connection is closed" unless @run
 
@@ -335,8 +370,12 @@ module MB
 
       private
 
-      # Common code for creating ports shared by #input and #output.  API subject to change.
-      def create_io(channels:, port_names:, connect:, portmap:, jack_direction:, queue_size:, io_class:)
+      # Common code for creating ports tied to IO objects, shared by #input and
+      # #output.  API subject to change.
+      def create_io(channels:, port_names:, connect:, portmap:, port_type:, jack_direction:, queue_size:, io_class:)
+        port_type = Jack::PORT_TYPES[port_type] || port_type || Jack::AUDIO_TYPE
+
+        queue_size ||= DEFAULT_QUEUE_SIZE[jack_direction][port_type]
         raise "Queue size must be positive" if queue_size <= 0
 
         # Find the number of connections, if given, in case channel count wasn't specified
@@ -395,7 +434,7 @@ module MB
         io = io_class.new(jack_ffi: self, ports: port_names)
 
         port_names.each do |name|
-          port_id = Jack.jack_port_register(@client, name, Jack::AUDIO_TYPE, jack_direction, 0)
+          port_id = Jack.jack_port_register(@client, name, port_type, jack_direction, 0)
           if port_id.nil? || port_id.null?
             ports.each do |p|
               Jack.jack_port_unregister(@client, p[:port])
@@ -408,6 +447,8 @@ module MB
             name: name,
             io: io,
             port_id: port_id,
+            port_type: port_type,
+            direction: jack_direction,
             queue: SizedQueue.new(queue_size),
             drops: -1
           }
@@ -417,7 +458,6 @@ module MB
           portmap[port_info[:name]] = port_info
         end
 
-        # TODO: Special connection types like :physical, channel counts based on connection list
         io.connect_all(connect) if connect
 
         io
@@ -462,23 +502,52 @@ module MB
               port_info[:drops] = 0
             end
 
-            queue.push(Numo::SFloat.from_binary(buf.read_bytes(frames * 4)), true)
+            # TODO: Move conditions outside of loop if this is slow
+            case port_info[:port_type]
+            when Jack::AUDIO_TYPE
+              queue.push(Numo::SFloat.from_binary(buf.read_bytes(frames * 4)), true)
+
+            when Jack::MIDI_TYPE
+              Jack.jack_midi_get_event_count(buf).times do |t|
+                event = Jack::JackMidiEvent.new
+                result = Jack.jack_midi_event_get(event, buf, t)
+                # TODO: push time with events
+                queue.push(event.data) if result == 0
+              end
+
+            else
+              raise "Unsupported port type: #{port_info[:port_type]}"
+            end
           end
 
           @output_ports.each do |name, port_info|
-            queue = port_info[:queue]
-            data = queue.pop(true) rescue nil unless queue.empty?
-            if data.nil?
-              log "Output port #{name} ran out of data to write" if port_info[:drops] == 0
-              port_info[:drops] += 1 unless port_info[:drops] < 0
-              data = @zero
-            else
-              log "Output port #{name} recovered after #{port_info[:drops]} dropped buffers" if port_info[:drops] > 0
-              port_info[:drops] = 0
-            end
-
             buf = Jack.jack_port_get_buffer(port_info[:port_id], frames)
-            buf.write_bytes(data.to_binary)
+
+            queue = port_info[:queue]
+
+            data = queue.pop(true) rescue nil unless queue.empty?
+
+            case port_info[:port_type]
+            when Jack::AUDIO_TYPE
+              if data.nil? && port_info[:port_type] == Jack::AUDIO_TYPE
+                # Only audio has to be written every cycle
+                log "Output port #{name} ran out of data to write" if port_info[:drops] == 0
+                port_info[:drops] += 1 unless port_info[:drops] < 0
+                data = @zero
+              else
+                log "Output port #{name} recovered after #{port_info[:drops]} missed buffers" if port_info[:drops] > 0
+                port_info[:drops] = 0
+              end
+
+              buf.write_bytes(data.to_binary)
+
+            when Jack::MIDI_TYPE
+              Jack.jack_midi_clear_buffer(buf)
+              raise NotImplementedError, "TODO: Implement MIDI output"
+
+            else
+              raise "Unsupported port type: #{port_info[:port_type]}"
+            end
           end
         }
       rescue => e

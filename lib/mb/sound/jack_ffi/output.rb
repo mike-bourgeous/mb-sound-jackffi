@@ -26,8 +26,9 @@ module MB
           @jack_ffi.remove(self)
         end
 
-        # Writes the given Array of data (Numo::SFloat recommended).  The Array
-        # should contain one element for each output port.
+        # Writes the given Array of data arrays (Numo::SFloat recommended for
+        # audio ports).  The Array should contain one element for each output
+        # port.
         def write(data)
           @jack_ffi.write_ports(@ports, data)
         end

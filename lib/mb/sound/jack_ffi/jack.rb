@@ -19,6 +19,12 @@ module MB
         ffi_lib ['jack', 'libjack.so.0.1.0', 'libjack.so.0']
 
         AUDIO_TYPE = "32 bit float mono audio"
+        MIDI_TYPE = "8 bit raw midi"
+
+        PORT_TYPES = {
+          audio: AUDIO_TYPE,
+          midi: MIDI_TYPE,
+        }
 
         @blocking = true
 
@@ -56,11 +62,29 @@ module MB
           :JackPortIsTerminal,
         ]
 
+        typedef :uint32_t, :jack_nframes_t
+
         class JackStatusWrapper < FFI::Struct
           layout :status, :jack_status_t
         end
 
-        typedef :uint32_t, :jack_nframes_t
+        class JackMidiEvent < FFI::Struct
+          layout :time, :jack_nframes_t,
+            :size, :size_t,
+            :buffer, :pointer
+
+          def time
+            self[:time]
+          end
+
+          def size
+            self[:size]
+          end
+
+          def data
+            self[:buffer].read_bytes(self[:size])
+          end
+        end
 
         # Client management functions
         # Note: jack_deactivate, or if you don't call that, jack_client_close,
@@ -93,6 +117,14 @@ module MB
         attach_function :jack_get_ports, [:jack_client, :string, :string, :jack_port_flags], :pointer
         attach_function :jack_connect, [:jack_client, :string, :string], :int
         attach_function :jack_disconnect, [:jack_client, :string, :string], :int
+
+        # MIDI functions
+        attach_function :jack_midi_get_event_count, [:pointer], :jack_nframes_t
+        attach_function :jack_midi_event_get, [JackMidiEvent.by_ref, :pointer, :uint32_t], :int
+        attach_function :jack_midi_clear_buffer, [:pointer], :void
+        attach_function :jack_midi_max_event_size, [:pointer], :size_t
+        attach_function :jack_midi_event_write, [:pointer, :jack_nframes_t, :pointer, :size_t], :int
+        attach_function :jack_midi_get_lost_event_count, [:pointer], :uint32_t
 
         # Other functions
         attach_function :jack_free, [:pointer], :void
