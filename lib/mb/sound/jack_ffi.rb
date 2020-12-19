@@ -357,7 +357,9 @@ module MB
 
       # This is generally for internal use by the JackFFI::Input class.
       #
-      # Reads one buffer_size chunk of data for the given Array of port IDs.
+      # For audio, reads one buffer_size chunk of data for the given Array of
+      # port IDs.  For MIDI, reads one raw MIDI event as a String (which may
+      # contain multiple MIDI messages) for each port.
       def read_ports(ports)
         raise "JACK connection is closed" unless @run
 
