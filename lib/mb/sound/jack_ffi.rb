@@ -1,5 +1,6 @@
 require 'forwardable'
 require 'numo/narray'
+require 'nibbler'
 
 require_relative 'jack_ffi/jack'
 require_relative 'jack_ffi/input'
@@ -87,6 +88,8 @@ module MB
           JackPortIsInput: 1,
           JackPortIsOutput: 1,
         }
+
+        @midi_nibbler = Nibbler.new
 
         @init_mutex = Mutex.new
 
@@ -508,11 +511,17 @@ module MB
               queue.push(Numo::SFloat.from_binary(buf.read_bytes(frames * 4)), true)
 
             when Jack::MIDI_TYPE
+              @midi_nibbler.clear_buffer
+
               Jack.jack_midi_get_event_count(buf).times do |t|
                 event = Jack::JackMidiEvent.new
                 result = Jack.jack_midi_event_get(event, buf, t)
                 # TODO: push time with events
-                queue.push(event.data) if result == 0
+                if result == 0
+                  events = @midi_nibbler.parse(event.data.bytes)
+                  events = [events] unless events.is_a?(Array)
+                  queue.push(events)
+                end
               end
 
             else
