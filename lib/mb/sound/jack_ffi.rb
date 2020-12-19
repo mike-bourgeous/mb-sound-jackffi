@@ -313,7 +313,9 @@ module MB
         raise "Output buffer must be #{@buffer_size} samples long" unless data.all? { |c| c.length == @buffer_size }
 
         ports.each_with_index do |name, idx|
-          @output_ports[name][:queue].push(data[idx])
+          d = data[idx]
+          d = Numo::SFloat.cast(d) unless d.is_a?(Numo::SFloat) # must pass 32-bit floats to JACK
+          @output_ports[name][:queue].push(d)
         end
 
         @buffer_size
