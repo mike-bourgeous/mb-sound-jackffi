@@ -218,9 +218,12 @@ module MB
       #                port types, or nil to return all types.  You may also
       #                pass :audio for audio, or :midi for MIDI.  Defaults to
       #                :audio.  See Jack::PORT_TYPES.
-      # +:flags+ - For filtering by flags: an Array of symbols from the
-      #            :jack_port_flags enum, or an Integer value with flags ORed
-      #            together.  To skip filtering by flags: 0, nil, or [].
+      # +:input+ - If true, will only return input ports.
+      # +:output+ - If true, will only return output ports.  If both :input and
+      #             :output are true, then no ports will be returned.
+      # +:physical+ - If true, will only return physical ports.  This may be
+      #               combined with :input to get playback ports, or :output to
+      #               get recording ports.
       #
       # Examples:
       #
@@ -236,10 +239,6 @@ module MB
       #     # Find all ports
       #     MB::Sound::JackFFI[].find_ports
       #     # => [...]
-      #
-      # TODO: I don't like using a flags: parameter as that leaks some ugly
-      # details of the FFI API.  I'd rather have separate named parameters for
-      # each important flag.
       def find_ports(name_regex = nil, port_type: :audio, input: nil, output: nil, physical: nil)
         flags = []
         flags << :JackPortIsInput if input
@@ -381,11 +380,11 @@ module MB
         raise "Queue size must be positive" if queue_size <= 0
 
         # Find the number of connections, if given, in case channel count wasn't specified
-        other_direction = jack_direction == :JackPortIsInput ? :JackPortIsOutput : :JackPortIsInput
+        is_input = jack_direction == :JackPortIsInput
         case connect
         when :physical
           # Connect to all physical ports
-          connect = find_ports(flags: [:JackPortIsPhysical, other_direction])
+          connect = find_ports(physical: true, input: is_input, output: !is_input)
 
         when /:/
           # Connect to a single port
@@ -393,7 +392,7 @@ module MB
 
         when String
           # Connect to as many ports as possible on a named client
-          connect = find_ports("^#{connect}:", flags: [other_direction])
+          connect = find_ports("^#{connect}:", input: is_input, output: !is_input)
 
         when Array, nil
           # Array of port names or no connections; do nothing
