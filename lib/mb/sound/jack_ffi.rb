@@ -146,7 +146,7 @@ module MB
       # create.  If an Array of port names is specified, then all of those
       # ports will be created regardless of the number of +:connect+.
       #
-      # Port names must be unique.
+      # Port names must be unique across all inputs and outputs.
       #
       # See the JackFFI class documentation for examples.
       #
@@ -328,9 +328,9 @@ module MB
       # Used internally by JackFFI::Output.
       #
       # Writes the given +data+ to the ports represented by the given Array of
-      # port IDs.  Returns the number of samples written per channel for audio
-      # ports, or however many groups of MIDI events were written to the first
-      # port for MIDI ports.
+      # port names.  Returns the number of samples written per channel for
+      # audio ports, or however many groups of MIDI events were written to the
+      # first port for MIDI ports.
       def write_ports(ports, data)
         raise "JACK connection is closed" unless @run
 
@@ -338,14 +338,15 @@ module MB
 
         # TODO: Maybe support different write sizes by writing into big ring buffers
         raise 'Must supply the same number of data arrays as ports' unless ports.length == data.length
-        raise "Output buffer must be #{@buffer_size} samples long" unless data.all? { |c| c.length == @buffer_size }
 
         ports.each_with_index do |name, idx|
           info = @output_ports[name]
+          raise "Invalid output port name: #{name}" unless info
 
           d = data[idx]
-          if info[:port_type] == Jack::AUDIO_TYPE && !d.is_a?(Numo::SFloat)
-            d = Numo::SFloat.cast(d) # must pass 32-bit floats to JACK
+          if info[:port_type] == Jack::AUDIO_TYPE
+            raise "Output buffer must be #{@buffer_size} samples long" if d.length != @buffer_size
+            d = Numo::SFloat.cast(d) unless d.is_a?(Numo::SFloat) # must pass 32-bit floats to JACK
           end
 
           info[:queue].push(d)
@@ -423,7 +424,7 @@ module MB
         end
 
         port_names.each do |name|
-          raise "Port #{name} already exists" if portmap.include?(name)
+          raise "A port named #{name.inspect} already exists" if @input_ports.include?(name) || @output_ports.include?(name)
         end
 
         # Use a separate array so that ports can be cleaned up if a later port
@@ -488,6 +489,8 @@ module MB
         @init_mutex&.synchronize {
           return unless @run && @client && @input_ports && @output_ports
 
+          start_frame = Jack.jack_last_frame_time(@client)
+
           @input_ports.each do |name, port_info|
             # FIXME: Avoid allocation in this function; use a buffer pool or something
             buf = Jack.jack_port_get_buffer(port_info[:port_id], frames)
@@ -526,10 +529,10 @@ module MB
 
             queue = port_info[:queue]
 
-            data = queue.pop(true) rescue nil unless queue.empty?
-
             case port_info[:port_type]
             when Jack::AUDIO_TYPE
+              data = queue.pop(true) rescue nil unless queue.empty?
+
               if data.nil? && port_info[:port_type] == Jack::AUDIO_TYPE
                 # Only audio has to be written every cycle
                 log "Output port #{name} ran out of data to write" if port_info[:drops] == 0
@@ -544,14 +547,22 @@ module MB
 
             when Jack::MIDI_TYPE
               Jack.jack_midi_clear_buffer(buf)
-              raise NotImplementedError, "TODO: Implement MIDI output"
+
+              # TODO: use actual sample offsets instead of just counting up by one sample per event
+              current_frame = 0
+              while !queue.empty? && current_frame < @buffer_size && Jack.jack_midi_max_event_size(buf) > 200
+                event = queue.pop
+                result = Jack.jack_midi_event_write(buf, current_frame, event, event.length)
+                raise "Could not deliver MIDI event: #{SystemCallError.new(result.abs)}" if result != 0
+                #current_frame += 1
+              end
 
             else
               raise "Unsupported port type: #{port_info[:port_type]}"
             end
           end
         }
-      rescue => e
+      rescue Exception => e
         @processing_error = e
         log "Error processing: #{e}"
       end

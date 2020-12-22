@@ -126,6 +126,9 @@ module MB
         attach_function :jack_midi_event_write, [:pointer, :jack_nframes_t, :pointer, :size_t], :int
         attach_function :jack_midi_get_lost_event_count, [:pointer], :uint32_t
 
+        # Time functions
+        attach_function :jack_last_frame_time, [:jack_client], :jack_nframes_t
+
         # Other functions
         attach_function :jack_free, [:pointer], :void
       end
