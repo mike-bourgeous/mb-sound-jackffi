@@ -26,7 +26,17 @@ module MB
           @jack_ffi.remove(self)
         end
 
-        # Reads one #buffer_size buffer of frames as an Array of Numo::SFloat.
+        # For an audio input, reads one #buffer_size buffer of frames as an
+        # Array of Numo::SFloat.
+        #
+        # For a MIDI input, reads one MIDI event for each port as an Array of
+        # Strings.  MIDI events may arrive faster or slower than audio buffers.
+        # It is recommended to create only a single MIDI port per Input object
+        # for this reason, as this method blocks until *every* port has data.
+        #
+        # This method blocks until data is available for every port (FIXME:
+        # this doesn't work well for MIDI if it will be used in an audio loop).
+        #
         # Any frame count parameter is ignored, as JACK operates in lockstep with
         # a fixed buffer size.  The returned Array will have one element for each
         # input port.
@@ -57,7 +67,7 @@ module MB
           case client_name_or_ports
           when String
             raise 'Client name to connect must not include a colon' if client_name_or_ports.include?(':')
-            new_ports = @jack_ffi.find_ports("^#{client_name_or_ports}:", flags: :JackPortIsOutput)
+            new_ports = @jack_ffi.find_ports("^#{client_name_or_ports}:", output: true)
 
           when Array
             new_ports = client_name_or_ports

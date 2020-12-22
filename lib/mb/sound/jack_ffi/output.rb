@@ -26,8 +26,9 @@ module MB
           @jack_ffi.remove(self)
         end
 
-        # Writes the given Array of data (Numo::SFloat recommended).  The Array
-        # should contain one element for each output port.
+        # Writes the given Array of data arrays (Numo::SFloat recommended for
+        # audio ports).  The Array should contain one element for each output
+        # port.
         def write(data)
           @jack_ffi.write_ports(@ports, data)
         end
@@ -55,7 +56,7 @@ module MB
           case client_name_or_ports
           when String
             raise 'Client name to connect must not include a colon' if client_name_or_ports.include?(':')
-            new_ports = @jack_ffi.find_ports("^#{client_name_or_ports}:", flags: :JackPortIsInput)
+            new_ports = @jack_ffi.find_ports("^#{client_name_or_ports}:", input: true)
 
           when Array
             new_ports = client_name_or_ports
