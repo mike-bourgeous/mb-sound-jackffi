@@ -44,6 +44,8 @@ The `MB::Sound::JackFFI` class represents a connection to a JACK server with a
 specific client name.  Its `input` and `output` instance methods will create
 input or output ports on the JACK client.
 
+### Audio
+
 ```ruby
 require 'mb-sound-jackffi' # Or 'mb/sound/jack_ffi'
 
@@ -55,6 +57,10 @@ end
 ```
 
 Also check out `bin/passthrough.rb` and `bin/invert.rb`.
+
+### MIDI
+
+Check out `bin/midi_thru.rb` and `bin/midi_invert.rb`.
 
 ## Testing
 
