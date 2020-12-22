@@ -360,13 +360,18 @@ module MB
       # For audio, reads one buffer_size chunk of data for the given Array of
       # port IDs.  For MIDI, reads one raw MIDI event as a String (which may
       # contain multiple MIDI messages) for each port.
-      def read_ports(ports)
+      #
+      # If +:blocking+ is false, then nil will be returned for any ports that
+      # have no data available.  If +:blocking+ is true (the default), then
+      # this method will wait for every port to have data available.
+      def read_ports(ports, blocking: true)
         raise "JACK connection is closed" unless @run
 
         check_for_processing_error
 
         ports.map { |name|
-          @input_ports[name][:queue].pop
+          queue = @input_ports[name][:queue]
+          queue.pop(!blocking) if blocking || !queue.empty?
         }
       end
 

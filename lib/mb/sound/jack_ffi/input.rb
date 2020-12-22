@@ -34,14 +34,15 @@ module MB
         # It is recommended to create only a single MIDI port per Input object
         # for this reason, as this method blocks until *every* port has data.
         #
-        # This method blocks until data is available for every port (FIXME:
-        # this doesn't work well for MIDI if it will be used in an audio loop).
+        # If +:blocking+ is true (the default), this method blocks until data
+        # is available for every port.  If false, nil will be returned for any
+        # port that doesn't have any data available.
         #
         # Any frame count parameter is ignored, as JACK operates in lockstep with
         # a fixed buffer size.  The returned Array will have one element for each
         # input port.
-        def read(_ignored = nil)
-          @jack_ffi.read_ports(@ports)
+        def read(_ignored = nil, blocking: true)
+          @jack_ffi.read_ports(@ports, blocking: blocking)
         end
 
         # Connects this input object's port with the given name or at the given
