@@ -11,7 +11,7 @@ module MB
     # pair.  Multiple input and output instances may be created for a single
     # client, which will show up as ports on a single JACK client.
     #
-    # Examples:
+    # Examples (see the README for more examples):
     #
     #     # Create two unconnected input ports
     #     MB::Sound::JackFFI[].input(channels: 2)
@@ -19,7 +19,6 @@ module MB
     #     # TODO: examples, and make sure they work
     #
     # TODO: Maybe support environment variables for client name, server name, port names, etc.
-    # TODO: Support connecting ports after creating them
     class JackFFI
       # The default size of the buffer queues for communicating between Ruby and
       # JACK.  This is separate from JACK's own internal buffers.  The
@@ -41,9 +40,10 @@ module MB
       #
       # Note that if there is already a client with the given name connected to
       # JACK, the client name will be changed by JACK.  Use JackFFI#client_name
-      # to get the true client name if needed.
-      def self.[](client_name: 'ruby', server_name: nil)
-        # TODO: Maybe the default client name should be File.basename($0).gsub(':', '_')
+      # to get the true client name if needed.  The default client name is
+      # based on the application name from +$0+.
+      def self.[](client_name: nil, server_name: nil)
+        client_name ||= File.basename($0).gsub(':', '_')
         @instances ||= {}
         @instances[name] ||= new(client_name: client_name, server_name: server_name)
       end
