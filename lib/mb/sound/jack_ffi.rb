@@ -390,7 +390,7 @@ module MB
         case connect
         when :physical
           # Connect to all physical ports
-          connect = find_ports(physical: true, input: is_input, output: !is_input)
+          connect = find_ports(physical: true, input: !is_input, output: is_input)
 
         when /:/
           # Connect to a single port
@@ -398,7 +398,7 @@ module MB
 
         when String
           # Connect to as many ports as possible on a named client
-          connect = find_ports("^#{connect}:", input: is_input, output: !is_input)
+          connect = find_ports("^#{connect}:", input: !is_input, output: is_input)
 
         when Array, nil
           # Array of port names or no connections; do nothing
