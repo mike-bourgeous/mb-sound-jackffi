@@ -57,6 +57,10 @@ module MB
 
       attr_reader :client_name, :server_name, :buffer_size, :rate, :inputs, :outputs
 
+      # An optional object that responds to Logger-style methods like #info and
+      # #error.
+      attr_accessor :logger
+
       # Generally you don't need to create a JackFFI instance yourself.  Instead,
       # use JackFFI[] (the array indexing operator) to retrieve a connection, and
       # JackFFI#input and JackFFI#output to get an input or output object with a
@@ -309,7 +313,7 @@ module MB
           port_info = portmap.delete(name)
           if port_info
             result = Jack.jack_port_unregister(@client, port_info[:port_id])
-            log "Error unregistering port #{port_info[:name]}: #{result}" if result != 0
+            error "Error unregistering port #{port_info[:name]}: #{result}" if result != 0
           end
         end
       end
@@ -341,9 +345,9 @@ module MB
 
         ports.each_with_index do |name, idx|
           info = @output_ports[name]
-          raise "Invalid output port name: #{name}" unless info
+          raise "Output port not found: #{name}" unless info
 
-          d = data[idx]
+          d = data[idx].not_inplace!
           if info[:port_type] == Jack::AUDIO_TYPE
             raise "Output buffer must be #{@buffer_size} samples long" if d.length != @buffer_size
             d = Numo::SFloat.cast(d) unless d.is_a?(Numo::SFloat) # must pass 32-bit floats to JACK
@@ -471,7 +475,21 @@ module MB
       end
 
       def log(msg)
-        puts "JackFFI(#{@server_name}/#{@client_name}): #{msg}"
+        msg = "JackFFI(#{@server_name}/#{@client_name}): #{msg}"
+        if @logger
+          @logger.info(msg)
+        else
+          puts msg
+        end
+      end
+
+      def error(msg)
+        msg = "JackFFI(#{@server_name}/#{@client_name}): Error: #{msg}"
+        if @logger
+          @logger.error(msg)
+        else
+          puts "\e[1;31m#{msg}\e[0m"
+        end
       end
 
       def check_for_processing_error
@@ -569,7 +587,7 @@ module MB
         }
       rescue Exception => e
         @processing_error = e
-        log "Error processing: #{e}"
+        error "Error processing: #{e}"
       end
 
       # Called when either the JACK server is shut down, or a severe enough

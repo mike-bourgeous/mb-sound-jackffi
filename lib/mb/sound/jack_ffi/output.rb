@@ -8,7 +8,7 @@ module MB
 
         def_delegators :@jack_ffi, :buffer_size, :rate
 
-        attr_reader :channels, :ports
+        attr_reader :channels, :ports, :closed
 
         # Called by JackFFI to initialize an audio output handle.  You generally
         # won't use this constructor directly.  Instead use JackFFI#output.
@@ -23,6 +23,7 @@ module MB
 
         # Removes this output object's ports from the client.
         def close
+          @closed = true
           @jack_ffi.remove(self)
         end
 
