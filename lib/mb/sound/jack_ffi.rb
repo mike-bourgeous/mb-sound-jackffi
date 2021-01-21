@@ -324,6 +324,7 @@ module MB
       # when FFI invokes the process callback after jack_deactivate starts).
       def close
         @init_mutex&.synchronize {
+          @closed = true
           @run = false
           JackFFI.remove(self)
         }

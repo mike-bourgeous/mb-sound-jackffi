@@ -8,7 +8,7 @@ module MB
 
         def_delegators :@jack_ffi, :buffer_size, :rate
 
-        attr_reader :channels, :ports, :closed
+        attr_reader :channels, :ports
 
         # Called by JackFFI to initialize an audio output handle.  You generally
         # won't use this constructor directly.  Instead use JackFFI#output.
@@ -25,6 +25,11 @@ module MB
         def close
           @closed = true
           @jack_ffi.remove(self)
+        end
+
+        # Returns true if this output has been closed.
+        def closed?
+          @closed
         end
 
         # Writes the given Array of data arrays (Numo::SFloat recommended for

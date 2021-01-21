@@ -23,7 +23,13 @@ module MB
 
         # Removes this input object's ports from the client.
         def close
+          @closed = true
           @jack_ffi.remove(self)
+        end
+
+        # Returns true if this input has been closed.
+        def closed?
+          @closed
         end
 
         # For an audio input, reads one #buffer_size buffer of frames as an
