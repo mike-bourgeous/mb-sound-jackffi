@@ -19,6 +19,7 @@ module MB
           @jack_ffi = jack_ffi
           @ports = ports
           @channels = ports.length
+          @closed = false
         end
 
         # Removes this input object's ports from the client.
