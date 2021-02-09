@@ -7,7 +7,7 @@ require 'mb-sound-jackffi'
 channels = ARGV[0]&.to_i || 2
 puts "Running with #{channels} channels"
 
-jack = MB::Sound::JackFFI[client_name: 'passthrough']
+jack = MB::Sound::JackFFI['passthrough']
 
 input = jack.input(channels: channels)
 output = jack.output(channels: channels)

@@ -25,7 +25,7 @@ be required for your system:
 
 ```bash
 # Debian-/Ubuntu-based Linux (macOS/Arch/CentOS will differ)
-sudo apt-get install libffi-dev
+sudo apt-get install libffi-dev libjack-jackd2-dev
 ```
 
 Then you'll want to install Ruby 2.7.2 or newer (I recommend
@@ -50,7 +50,7 @@ input or output ports on the JACK client.
 require 'mb-sound-jackffi' # Or 'mb/sound/jack_ffi'
 
 # Enjoy silence
-out = MB::Sound::JackFFI[client_name: 'my app'].output(port_names: ['left', 'right'], connect: :physical)
+out = MB::Sound::JackFFI['my app'].output(port_names: ['left', 'right'], connect: :physical)
 loop do
   out.write([Numo::SFloat.zeros(out.buffer_size)] * out.channels)
 end
