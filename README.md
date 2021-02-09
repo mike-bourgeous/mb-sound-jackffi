@@ -25,7 +25,7 @@ be required for your system:
 
 ```bash
 # Debian-/Ubuntu-based Linux (macOS/Arch/CentOS will differ)
-sudo apt-get install libffi-dev
+sudo apt-get install libffi-dev libjack-jackd2-dev
 ```
 
 Then you'll want to install Ruby 2.7.2 or newer (I recommend
