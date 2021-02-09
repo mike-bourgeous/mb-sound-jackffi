@@ -6,7 +6,7 @@
 require "bundler/setup"
 require 'mb-sound-jackffi'
 
-jack = MB::Sound::JackFFI[client_name: File.basename($0)]
+jack = MB::Sound::JackFFI[File.basename($0)]
 input = jack.input(connect: ARGV[0] || :physical)
 
 cols = ENV['COLUMNS']&.to_i || 80

@@ -1,8 +1,8 @@
 module MB
   module Sound
     class JackFFI
-      # Returned by JackFFI#output.  E.g. use JackFFI[client_name: 'my
-      # client'].output(channels: 2) to get two output ports on the client.
+      # Returned by JackFFI#output.  E.g. use JackFFI['my client'].output(channels: 2)
+      # to get two output ports on the client.
       class Output
         extend Forwardable
 

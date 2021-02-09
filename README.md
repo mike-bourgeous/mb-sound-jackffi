@@ -50,7 +50,7 @@ input or output ports on the JACK client.
 require 'mb-sound-jackffi' # Or 'mb/sound/jack_ffi'
 
 # Enjoy silence
-out = MB::Sound::JackFFI[client_name: 'my app'].output(port_names: ['left', 'right'], connect: :physical)
+out = MB::Sound::JackFFI['my app'].output(port_names: ['left', 'right'], connect: :physical)
 loop do
   out.write([Numo::SFloat.zeros(out.buffer_size)] * out.channels)
 end

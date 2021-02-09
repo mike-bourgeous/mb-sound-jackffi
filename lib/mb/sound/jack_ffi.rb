@@ -55,7 +55,7 @@ module MB
       #
       # The JACKFFI_CLIENT_NAME environment variable may be used to override the
       # default auto-generated client name.
-      def self.[](client_name: nil, server_name: nil)
+      def self.[](client_name = nil, server_name: nil)
         client_name ||= ENV['JACKFFI_CLIENT_NAME'] || File.basename($0).gsub(':', '_')
         @instances ||= {}
         @instances[name] ||= new(client_name: client_name, server_name: server_name)
