@@ -13,12 +13,19 @@ module MB
     #
     # Examples (see the README for more examples):
     #
-    #     # Create two unconnected input ports
+    #     # Create two unconnected input ports (unless JACKFFI_INPUT_CONNECT is set)
     #     MB::Sound::JackFFI[].input(channels: 2)
     #
     #     # TODO: examples, and make sure they work
     #
-    # TODO: Maybe support environment variables for client name, server name, port names, etc.
+    # Environment variables:
+    #
+    # JACK_DEFAULT_SERVER - The name of the JACK server to use ('default') (handled by libjack).
+    # JACKFFI_CLIENT_NAME - Overrides the default client name if set.
+    # JACKFFI_INPUT_CONNECT - A port connection string to override inputs' +connect+ parameter,
+    #                         when +connect+ is nil or :physical.
+    # JACKFFI_OUTPUT_CONNECT - A port connectio nstring to override outputs' +connect+
+    #                          parameter, when +connect+ is nil or :physical.
     class JackFFI
       # The default size of the buffer queues for communicating between Ruby and
       # JACK.  This is separate from JACK's own internal buffers.  The
@@ -42,8 +49,14 @@ module MB
       # JACK, the client name will be changed by JACK.  Use JackFFI#client_name
       # to get the true client name if needed.  The default client name is
       # based on the application name from +$0+.
+      #
+      # The JACK_DEFAULT_SERVER environment variable will be used by libjack to
+      # select a different server if +server_name+ is not specified.
+      #
+      # The JACKFFI_CLIENT_NAME environment variable may be used to override the
+      # default auto-generated client name.
       def self.[](client_name: nil, server_name: nil)
-        client_name ||= File.basename($0).gsub(':', '_')
+        client_name ||= ENV['JACKFFI_CLIENT_NAME'] || File.basename($0).gsub(':', '_')
         @instances ||= {}
         @instances[name] ||= new(client_name: client_name, server_name: server_name)
       end
@@ -148,7 +161,7 @@ module MB
       # If +:connect+ is specified, then +:channels+ may be omitted and the
       # number of connection ports will be used as the number of channels to
       # create.  If an Array of port names is specified, then all of those
-      # ports will be created regardless of the number of +:connect+.
+      # ports will be created regardless of the number of +:connect+ ports.
       #
       # Port names must be unique across all inputs and outputs.
       #
@@ -163,7 +176,10 @@ module MB
       #              String with a client name like "system", an Array of port
       #              name strings like +["system:playback_1",
       #              "system:playback_4"]+, or the Symbol :physical to connect
-      #              to all available physical recording ports.
+      #              to all available physical recording ports.  If this is nil
+      #              or :physical, then the JACKFFI_INPUT_CONNECT environment
+      #              variable may be used to provide a different connection
+      #              String.
       # +:queue_size+ - Optional: number of audio buffers to hold between Ruby
       #                 and the JACK thread (higher means more latency but less
       #                 risk of dropouts).  See DEFAULT_QUEUE_SIZE for
@@ -172,7 +188,7 @@ module MB
         create_io(
           channels: channels,
           port_names: port_names,
-          connect: connect,
+          connect: env_or_connect(connect, true),
           portmap: @input_ports,
           port_type: port_type,
           jack_direction: :JackPortIsInput,
@@ -187,6 +203,8 @@ module MB
       # Parameters are the same as for #input, but with the default for
       # +:queue_size+ being OUTPUT_QUEUE_SIZE, and with :connect connecting to
       # playback ports (instead of recording ports) for the special value
+      # :physical.  As with #input, the JACKFFI_OUTPUT_CONNECT environment
+      # variable will override connections when +connect+ is either nil or
       # :physical.
       #
       # See the JackFFI class documentation for examples.
@@ -194,7 +212,7 @@ module MB
         create_io(
           channels: channels,
           port_names: port_names,
-          connect: connect,
+          connect: env_or_connect(connect, false),
           portmap: @output_ports,
           port_type: port_type,
           jack_direction: :JackPortIsOutput,
@@ -381,6 +399,16 @@ module MB
       end
 
       private
+
+      # If +connect+ is nil or :physical, returns the value of the
+      # JACKFFI_(INPUT|OUTPUT)_CONNECT environment variable for the given
+      # direction (+is_input+).  If the environment variable is not set, then
+      # +connect+ is always returned.
+      def env_or_connect(connect, is_input)
+        env = ENV[is_input ? 'JACKFFI_INPUT_CONNECT' : 'JACKFFI_OUTPUT_CONNECT']
+        return env if env && (connect == :physical || connect.nil?)
+        connect
+      end
 
       # Common code for creating ports tied to IO objects, shared by #input and
       # #output.  API subject to change.
