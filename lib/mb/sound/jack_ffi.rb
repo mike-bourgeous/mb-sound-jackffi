@@ -23,7 +23,7 @@ module MB
     # JACK_DEFAULT_SERVER - The name of the JACK server to use ('default') (handled by libjack).
     # JACKFFI_CLIENT_NAME - Overrides the default client name if set.
     # JACKFFI_INPUT_CONNECT - A port connection string to override inputs' +connect+ parameter,
-    #                         when +connect+ is nil or :physical.
+    #                         when +connect+ is nil or :physical.  See #env_or_connect.
     # JACKFFI_OUTPUT_CONNECT - A port connection string to override outputs' +connect+
     #                          parameter, when +connect+ is nil or :physical.
     class JackFFI
@@ -404,9 +404,22 @@ module MB
       # JACKFFI_(INPUT|OUTPUT)_CONNECT environment variable for the given
       # direction (+is_input+).  If the environment variable is not set, then
       # +connect+ is always returned.
+      #
+      # Semicolons may be used in the environment variables to separate the
+      # connections for individual ports.  Commas may be used to separate
+      # multiple connections for a single port.
       def env_or_connect(connect, is_input)
         env = ENV[is_input ? 'JACKFFI_INPUT_CONNECT' : 'JACKFFI_OUTPUT_CONNECT']
-        return env if env && (connect == :physical || connect.nil?)
+        if env && connect == :physical || connect.nil?
+          if env.include?(',') || env.include?(';')
+            return env.split(';').map { |port|
+              port.split(',')
+            }
+          end
+
+          return env
+        end
+
         connect
       end
 

@@ -44,6 +44,34 @@ The `MB::Sound::JackFFI` class represents a connection to a JACK server with a
 specific client name.  Its `input` and `output` instance methods will create
 input or output ports on the JACK client.
 
+### Environment variables
+
+The `JACKFFI_INPUT_CONNECT` and `JACKFFI_OUTPUT_CONNECT` environment variables
+will override `:physical` or `nil` connection parameters when creating input
+and output objects.  If you are creating multiple inputs and outputs in your
+code (or both audio and MIDI), pass an Array or a connection string to
+whichever I/O you don't want to use environment variables.
+
+For more complex connections, you can separate named ports for a single port
+with commas, and connections for multiple ports with semicolons.
+
+```bash
+# Connect to the first ports on a named client
+JACKFFI_INPUT_CONNECT='zynaddsubfx'
+JACKFFI_OUTPUT_CONNECT='system'
+bin/passthrough.rb
+
+# Connect one to one (semicolon separates connections for multiple ports)
+export JACKFFI_INPUT_CONNECT='zynaddsubfx:out_1;zynaddsubfx:out_2'
+export JACKFFI_OUTPUT_CONNECT='system:playback_1;system:playback_2'
+bin/passthrough.rb
+
+# Connect many to many (comma separates multiple connections to one port)
+export JACKFFI_INPUT_CONNECT='zynaddsubfx:out_1,zynaddsubfx:out_2;zynaddsubfx:out_2'
+export JACKFFI_OUTPUT_CONNECT='system:playback_1,system:playback_2;system:playback_5'
+bin/passthrough.rb
+```
+
 ### Audio
 
 ```ruby
