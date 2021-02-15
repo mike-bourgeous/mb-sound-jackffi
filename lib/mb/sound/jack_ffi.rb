@@ -131,7 +131,7 @@ module MB
 
           @buffer_size = Jack.jack_get_buffer_size(@client)
           @rate = Jack.jack_get_sample_rate(@client)
-          @zero = Numo::SFloat.zeros(@buffer_size)
+          @zero = Numo::SFloat.zeros(@buffer_size).to_binary
 
           @process_handle = method(:process) # Assigned to variable to prevent GC
           result = Jack.jack_set_process_callback(@client, @process_handle, nil)
@@ -372,6 +372,9 @@ module MB
             d = Numo::SFloat.cast(d) unless d.is_a?(Numo::SFloat) # must pass 32-bit floats to JACK
           end
 
+          # TODO: Find a way to do a direct memcpy instead of creating a Ruby
+          # string, but be wary of buffers changing between queuing and playing
+          d = d.to_binary if d.is_a?(Numo::NArray)
           info[:queue].push(d)
         end
 
@@ -598,7 +601,7 @@ module MB
             when Jack::AUDIO_TYPE
               data = queue.pop(true) rescue nil unless queue.empty?
 
-              if data.nil? && port_info[:port_type] == Jack::AUDIO_TYPE
+              if data.nil?
                 # Only audio has to be written every cycle
                 log "Output port #{name} ran out of data to write" if port_info[:drops] == 0
                 port_info[:drops] += 1 unless port_info[:drops] < 0
@@ -608,7 +611,7 @@ module MB
                 port_info[:drops] = 0
               end
 
-              buf.write_bytes(data.to_binary)
+              buf.write_bytes(data)
 
             when Jack::MIDI_TYPE
               Jack.jack_midi_clear_buffer(buf)
@@ -619,7 +622,7 @@ module MB
                 event = queue.pop
                 result = Jack.jack_midi_event_write(buf, current_frame, event, event.length)
                 raise "Could not deliver MIDI event: #{SystemCallError.new(result.abs)}" if result != 0
-                #current_frame += 1
+                current_frame += 1
               end
 
             else
