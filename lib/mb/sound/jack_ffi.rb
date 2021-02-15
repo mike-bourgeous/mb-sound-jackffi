@@ -24,7 +24,7 @@ module MB
     # JACKFFI_CLIENT_NAME - Overrides the default client name if set.
     # JACKFFI_INPUT_CONNECT - A port connection string to override inputs' +connect+ parameter,
     #                         when +connect+ is nil or :physical.
-    # JACKFFI_OUTPUT_CONNECT - A port connectio nstring to override outputs' +connect+
+    # JACKFFI_OUTPUT_CONNECT - A port connection string to override outputs' +connect+
     #                          parameter, when +connect+ is nil or :physical.
     class JackFFI
       # The default size of the buffer queues for communicating between Ruby and
@@ -99,7 +99,7 @@ module MB
         @inputs = []
         @outputs = []
 
-        # Montonically increasing indices used to number prefix-named ports.
+        # Monotonically increasing indices used to number prefix-named ports.
         @port_indices = {
           JackPortIsInput: 1,
           JackPortIsOutput: 1,
