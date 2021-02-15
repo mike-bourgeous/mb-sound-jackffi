@@ -410,7 +410,7 @@ module MB
       # multiple connections for a single port.
       def env_or_connect(connect, is_input)
         env = ENV[is_input ? 'JACKFFI_INPUT_CONNECT' : 'JACKFFI_OUTPUT_CONNECT']
-        if env && connect == :physical || connect.nil?
+        if env && (connect == :physical || connect.nil?)
           if env.include?(',') || env.include?(';')
             return env.split(';').map { |port|
               port.split(',')
