@@ -2,6 +2,7 @@ require 'forwardable'
 require 'numo/narray'
 
 require_relative 'jack_ffi/jack'
+require_relative 'jack_ffi/io_common'
 require_relative 'jack_ffi/input'
 require_relative 'jack_ffi/output'
 
