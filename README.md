@@ -90,6 +90,11 @@ Also check out `bin/passthrough.rb` and `bin/invert.rb`.
 
 Check out `bin/midi_thru.rb` and `bin/midi_invert.rb`.
 
+### Ports and connections
+
+See `bin/meter.rb` and `bin/passthrough.rb` for examples of retrieving and
+displaying the names of ports connected to JackFFI.
+
 ## Testing
 
 Testing is mostly manual.  I might eventually figure out a way to install jackd

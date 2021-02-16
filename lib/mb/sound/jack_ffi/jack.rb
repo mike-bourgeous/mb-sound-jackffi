@@ -102,12 +102,21 @@ module MB
         attach_function :jack_get_buffer_size, [:jack_client], :jack_nframes_t
         attach_function :jack_get_sample_rate, [:jack_client], :jack_nframes_t
 
-        # Callback functions
+        # System callback functions
         typedef :pointer, :jack_user_data
         callback :jack_process_callback, [:jack_nframes_t, :jack_user_data], :void
         callback :jack_shutdown_callback, [:jack_user_data], :void
         attach_function :jack_set_process_callback, [:jack_client, :jack_process_callback, :jack_user_data], :int
         attach_function :jack_on_shutdown, [:jack_client, :jack_shutdown_callback, :jack_user_data], :void
+
+        # Port callback functions
+        typedef :uint32_t, :jack_port_id
+        callback :jack_port_connect_callback, [:jack_port_id, :jack_port_id, :int, :jack_user_data], :void
+        callback :jack_port_registration_callback, [:jack_port_id, :int, :jack_user_data], :void
+        callback :jack_port_rename_callback, [:jack_port_id, :string, :string, :jack_user_data], :void
+        attach_function :jack_set_port_connect_callback, [:jack_client, :jack_port_connect_callback, :jack_user_data], :int
+        attach_function :jack_set_port_registration_callback, [:jack_client, :jack_port_registration_callback, :jack_user_data], :int
+        attach_function :jack_set_port_rename_callback, [:jack_client, :jack_port_rename_callback, :jack_user_data], :int
 
         # Port management functions
         typedef :pointer, :jack_port
@@ -115,6 +124,9 @@ module MB
         attach_function :jack_port_unregister, [:jack_client, :jack_port], :int
         attach_function :jack_port_get_buffer, [:jack_port, :jack_nframes_t], :pointer
         attach_function :jack_get_ports, [:jack_client, :string, :string, :jack_port_flags], :pointer
+        attach_function :jack_port_by_id, [:jack_client, :jack_port_id], :jack_port
+        attach_function :jack_port_by_name, [:jack_client, :string], :jack_port
+        attach_function :jack_port_get_all_connections, [:jack_client, :jack_port], :pointer
         attach_function :jack_connect, [:jack_client, :string, :string], :int
         attach_function :jack_disconnect, [:jack_client, :string, :string], :int
 
@@ -131,6 +143,24 @@ module MB
 
         # Other functions
         attach_function :jack_free, [:pointer], :void
+
+        # Returns a Ruby Array of Strings from the given char** pointer.
+        # Returns an empty array if +pointer+ is Ruby nil, or points to C NULL.
+        #
+        # This function does not call free() or jack_free().
+        def self.get_string_array(pointer)
+          list = []
+
+          return list if pointer.nil? || pointer.null?
+
+          current = FFI::Pointer.new(pointer)
+          while !current.read_pointer.null?
+            list << current.read_pointer.read_string
+            current += FFI::Type::POINTER.size
+          end
+
+          list
+        end
       end
     end
   end

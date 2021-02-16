@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |spec|
   spec.name          = "mb-sound-jackffi"
-  spec.version       = '0.0.13.usegit'
+  spec.version       = '0.0.14.usegit'
   spec.authors       = ["Mike Bourgeous"]
   spec.email         = ["mike@mikebourgeous.com"]
 
@@ -28,6 +28,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "bundler", "~> 2.1.0"
   spec.add_development_dependency "rake", "~> 13.0"
   spec.add_development_dependency 'pry', '~> 0.13.1'
+  spec.add_development_dependency 'pry-byebug', '~> 3.9.0'
 
   spec.add_runtime_dependency 'numo-narray', '~> 0.9.1'
   spec.add_runtime_dependency 'ffi', '~> 1.13.0'

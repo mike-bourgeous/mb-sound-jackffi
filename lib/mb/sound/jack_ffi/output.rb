@@ -3,36 +3,7 @@ module MB
     class JackFFI
       # Returned by JackFFI#output.  E.g. use JackFFI['my client'].output(channels: 2)
       # to get two output ports on the client.
-      class Output
-        extend Forwardable
-
-        def_delegators :@jack_ffi, :buffer_size, :rate
-
-        attr_reader :channels, :ports
-
-        # Called by JackFFI to initialize an audio output handle.  You generally
-        # won't use this constructor directly.  Instead use JackFFI#output.
-        #
-        # +:jack_ffi+ - The JackFFI instance that contains this output.
-        # +:ports+ - An Array of JACK port names.
-        def initialize(jack_ffi:, ports:)
-          @jack_ffi = jack_ffi
-          @ports = ports
-          @channels = ports.length
-          @closed = false
-        end
-
-        # Removes this output object's ports from the client.
-        def close
-          @closed = true
-          @jack_ffi.remove(self)
-        end
-
-        # Returns true if this output has been closed.
-        def closed?
-          @closed
-        end
-
+      class Output < IOCommon
         # Writes the given Array of data arrays (Numo::SFloat recommended for
         # audio ports).  The Array should contain one element for each output
         # port.
@@ -41,14 +12,9 @@ module MB
         end
 
         # Connects this output object's port with the given name or at the
-        # given index to the given JACK output port.
+        # given index to the given JACK input port.
         def connect(name_or_index, input_port_name)
-          if name_or_index.is_a?(Integer)
-            port = @ports[name_or_index]
-          else
-            port = @ports.find(name_or_index)
-          end
-
+          port = get_port(name_or_index)
           raise "Port #{name_or_index} not found on this output object" unless port
 
           @jack_ffi.connect_ports(port, input_port_name)
