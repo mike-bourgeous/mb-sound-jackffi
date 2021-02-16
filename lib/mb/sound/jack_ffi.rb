@@ -275,19 +275,27 @@ module MB
         end
 
         port_names = Jack.jack_get_ports(@client, name_regex, type_regex, flags)
-        return [] if port_names.nil? || port_names.null?
-
-        ports = []
-
-        current_name = FFI::Pointer.new(port_names)
-        while !current_name.read_pointer.null?
-          ports << current_name.read_pointer.read_string
-          current_name += FFI::Type::POINTER.size
-        end
-
+        ports = Jack.get_string_array(port_names)
         ports.sort_by! { |name| name.split(':', 2)[0] }
       ensure
         Jack.jack_free(port_names) unless port_names.nil? || port_names.null?
+      end
+
+      # Returns an Array of Strings with the connections for the given named
+      # port.  Raises an error if a port with the given name was not found.  If
+      # the +port_name+ does not include a ':', then this JackFFI instance's
+      # client name will be prepended.  The Array is unsorted, with values in
+      # the order in which JACK returned them.
+      def get_connections(port_name)
+        port_name = "#{@client_name}:#{port_name}" unless port_name.include?(':')
+
+        port = Jack.jack_port_by_name(@client, port_name)
+        raise "Port #{port_name} not found" if port.nil? || port.null?
+
+        port_names = Jack.jack_port_get_all_connections(@client, port)
+        Jack.get_string_array(port_names)
+      ensure
+        Jack.jack_free(port_names)
       end
 
       # Connects any JACK input port (not just from this client) to any output

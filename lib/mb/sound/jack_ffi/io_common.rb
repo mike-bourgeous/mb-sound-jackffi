@@ -33,6 +33,26 @@ module MB
           @closed
         end
 
+        # Returns an Array of Arrays of Strings with the connections for each
+        # port on this input.
+        def connections(name_or_index = nil)
+          if name_or_index
+            name_or_index = get_port(name_or_index)
+            raise "Port #{name_or_index} not found" unless name_or_index
+          end
+
+          case name_or_index
+          when String
+            @jack_ffi.get_connections(name_or_index)
+
+          when nil
+            @ports.map { |name| @jack_ffi.get_connections(name) }
+
+          else
+            raise "Invalid port value to retrieve connections (#{name_or_index.inspect})"
+          end
+        end
+
         # Returns the name of the port with the given +name_or_index+, which is
         # either a String for a named port, or an Integer for a port index
         # within this Input.  Returns nil if the name or index wasn't found.
