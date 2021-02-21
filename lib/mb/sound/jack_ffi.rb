@@ -260,7 +260,7 @@ module MB
       #     # => ["some_client_name:in_1", ...]
       #
       #     # Find all ports
-      #     MB::Sound::JackFFI[].find_ports
+      #     MB::Sound::JackFFI[].find_ports(port_type: nil)
       #     # => [...]
       def find_ports(name_regex = nil, port_type: :audio, input: nil, output: nil, physical: nil)
         flags = []
@@ -448,7 +448,7 @@ module MB
         case connect
         when :physical
           # Connect to all physical ports
-          connect = find_ports(physical: true, input: !is_input, output: is_input)
+          connect = find_ports(physical: true, port_type: port_type, input: !is_input, output: is_input)
 
         when /:/
           # Connect to a single port
@@ -456,7 +456,7 @@ module MB
 
         when String
           # Connect to as many ports as possible on a named client
-          connect = find_ports("^#{connect}:", input: !is_input, output: is_input)
+          connect = find_ports("^#{connect}:", port_type: port_type, input: !is_input, output: is_input)
 
         when Array, nil
           # Array of port names or no connections; do nothing
@@ -496,7 +496,7 @@ module MB
 
         # TODO: if having one SizedQueue per port is too slow, maybe have one SizedQueue per IO object
 
-        io = io_class.new(jack_ffi: self, ports: port_names)
+        io = io_class.new(jack_ffi: self, ports: port_names, port_type: port_type)
 
         port_names.each do |name|
           port_id = Jack.jack_port_register(@client, name, port_type, jack_direction, 0)

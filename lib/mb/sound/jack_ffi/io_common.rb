@@ -15,10 +15,11 @@ module MB
         #
         # +:jack_ffi+ - The JackFFI instance that contains this output.
         # +:ports+ - An Array of JACK port names.
-        def initialize(jack_ffi:, ports:)
+        def initialize(jack_ffi:, ports:, port_type:)
           @jack_ffi = jack_ffi
           @ports = ports
           @channels = ports.length
+          @port_type = port_type
           @closed = false
         end
 

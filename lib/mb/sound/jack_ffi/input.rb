@@ -41,7 +41,7 @@ module MB
           case client_name_or_ports
           when String
             raise 'Client name to connect must not include a colon' if client_name_or_ports.include?(':')
-            new_ports = @jack_ffi.find_ports("^#{client_name_or_ports}:", output: true)
+            new_ports = @jack_ffi.find_ports("^#{client_name_or_ports}:", port_type: @port_type, output: true)
 
           when Array
             new_ports = client_name_or_ports
