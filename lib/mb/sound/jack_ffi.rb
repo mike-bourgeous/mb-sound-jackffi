@@ -377,7 +377,7 @@ module MB
 
           d = data[idx].not_inplace!
           if info[:port_type] == Jack::AUDIO_TYPE
-            raise "Output buffer must be #{@buffer_size} samples long" if d.length != @buffer_size
+            raise "Output buffer must be #{@buffer_size} samples long (received #{d.length})" if d.length != @buffer_size
             d = Numo::SFloat.cast(d) unless d.is_a?(Numo::SFloat) # must pass 32-bit floats to JACK
           end
 
