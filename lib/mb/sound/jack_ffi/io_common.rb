@@ -7,7 +7,7 @@ module MB
         extend Forwardable
 
         def_delegators :@jack_ffi, :buffer_size, :rate
-        attr_reader :channels, :ports
+        attr_reader :channels, :ports, :jack_ffi
 
         # Called by JackFFI to initialize an input or output.  You generally
         # won't use this constructor directly.  Instead use JackFFI#input and
