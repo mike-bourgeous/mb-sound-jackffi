@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |spec|
   spec.name          = "mb-sound-jackffi"
-  spec.version       = '0.0.18.usegit'
+  spec.version       = '0.0.19.usegit'
   spec.authors       = ["Mike Bourgeous"]
   spec.email         = ["mike@mikebourgeous.com"]
 

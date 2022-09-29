@@ -375,7 +375,9 @@ module MB
           info = @output_ports[name]
           raise "Output port not found: #{name}" unless info
 
-          d = data[idx].not_inplace!
+          d = data[idx]
+          d.not_inplace! if d.is_a?(Numo::NArray)
+
           if info[:port_type] == Jack::AUDIO_TYPE
             raise "Output buffer must be #{@buffer_size} samples long (received #{d.length})" if d.length != @buffer_size
             d = d.real if d.is_a?(Numo::SComplex) || d.is_a?(Numo::DComplex)
