@@ -26,6 +26,11 @@ module MB
           midi: MIDI_TYPE,
         }
 
+        PORT_TYPES_BY_NAME = {
+          AUDIO_TYPE => :audio,
+          MIDI_TYPE => :midi,
+        }
+
         @blocking = true
 
         bitmask :jack_options_t, [
@@ -101,6 +106,7 @@ module MB
         # Server status functions
         attach_function :jack_get_buffer_size, [:jack_client], :jack_nframes_t
         attach_function :jack_get_sample_rate, [:jack_client], :jack_nframes_t
+        attach_function :jack_cpu_load, [:jack_client], :float
 
         # System callback functions
         typedef :pointer, :jack_user_data
@@ -120,6 +126,7 @@ module MB
 
         # Port management functions
         typedef :pointer, :jack_port
+        typedef :uint64, :jack_uuid
         attach_function :jack_port_register, [:jack_client, :string, :string, :jack_port_flags, :ulong], :jack_port
         attach_function :jack_port_unregister, [:jack_client, :jack_port], :int
         attach_function :jack_port_get_buffer, [:jack_port, :jack_nframes_t], :pointer
@@ -127,6 +134,13 @@ module MB
         attach_function :jack_port_by_id, [:jack_client, :jack_port_id], :jack_port
         attach_function :jack_port_by_name, [:jack_client, :string], :jack_port
         attach_function :jack_port_get_all_connections, [:jack_client, :jack_port], :pointer
+        attach_function :jack_port_name, [:jack_port], :string
+        attach_function :jack_port_short_name, [:jack_port], :string
+        attach_function :jack_port_type, [:jack_port], :string
+        attach_function :jack_port_uuid, [:jack_port], :jack_uuid
+        attach_function :jack_port_get_aliases, [:jack_port, :pointer], :int
+        attach_function :jack_port_name_size, [], :int
+        attach_function :jack_port_type_size, [], :int
         attach_function :jack_connect, [:jack_client, :string, :string], :int
         attach_function :jack_disconnect, [:jack_client, :string, :string], :int
 
@@ -155,7 +169,7 @@ module MB
 
           current = FFI::Pointer.new(pointer)
           while !current.read_pointer.null?
-            list << current.read_pointer.read_string
+            list << current.read_pointer.read_string&.force_encoding('UTF-8')
             current += FFI::Type::POINTER.size
           end
 

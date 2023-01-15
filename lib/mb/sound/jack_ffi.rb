@@ -281,6 +281,43 @@ module MB
         Jack.jack_free(port_names) unless port_names.nil? || port_names.null?
       end
 
+      # Returns a Hash with information about the port with the given name.  If
+      # the full port name (including client name and colon) is not given, then
+      # this function will look for a port on this client.
+      def port_info(port_name)
+        port_name = "#{@client_name}:#{port_name}" unless port_name.include?(':')
+
+        port = Jack.jack_port_by_name(@client, port_name)
+        raise "Port #{port_name} not found" if port.nil? || port.null?
+
+        # The aliases function expects an array of two pointers
+        alias_buffers = 2.times.map {
+          FFI::MemoryPointer.new(:char, Jack.jack_port_name_size)
+        }
+        alias_ptr = FFI::MemoryPointer.new(:pointer, 2)
+        alias_ptr.put_array_of_pointer(0, alias_buffers)
+
+        alias_ret = Jack.jack_port_get_aliases(port, alias_ptr)
+        aliases = alias_buffers
+          .map { |p| p.read_string(Jack.jack_port_name_size)&.force_encoding('UTF-8')&.partition("\x00")&.[](0) }
+          .reject { |p| p.nil? || p.empty? }
+
+        port_type = Jack.jack_port_type(port)&.force_encoding('UTF-8')
+
+        {
+          name: Jack.jack_port_name(port)&.force_encoding('UTF-8'),
+          short_name: Jack.jack_port_short_name(port)&.force_encoding('UTF-8'),
+          port_type: Jack::PORT_TYPES_BY_NAME[port_type] || port_type,
+          uuid: Jack.jack_port_uuid(port),
+          aliases: aliases,
+          connections: get_connections(port_name),
+        }
+
+      ensure
+        alias_ptr&.free
+        alias_buffers&.map(&:free)
+      end
+
       # Returns an Array of Strings with the connections for the given named
       # port.  Raises an error if a port with the given name was not found.  If
       # the +port_name+ does not include a ':', then this JackFFI instance's
