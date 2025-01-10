@@ -6,9 +6,10 @@ module MB
       class Input < IOCommon
         # Indicates to other MB::Sound code that this input can only handle
         # reads of exactly #buffer_size frames.
-        def strict_buffer_size
+        def strict_buffer_size?
           true
         end
+        alias strict_buffer_size strict_buffer_size?
 
         # For an audio input, reads one #buffer_size buffer of frames as an
         # Array of Numo::SFloat.

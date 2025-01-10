@@ -6,9 +6,10 @@ module MB
       class Output < IOCommon
         # Indicates to other MB::Sound code that this output can only handle
         # writes of exactly #buffer_size frames.
-        def strict_buffer_size
+        def strict_buffer_size?
           true
         end
+        alias strict_buffer_size strict_buffer_size?
 
         # Writes the given Array of data arrays (Numo::SFloat recommended for
         # audio ports).  The Array should contain one element for each output
