@@ -4,6 +4,12 @@ module MB
       # Returned by JackFFI#input.  E.g. use JackFFI['my client'].input(channels: 2)
       # to get two input ports on the client.
       class Input < IOCommon
+        # Indicates to other MB::Sound code that this input can only handle
+        # reads of exactly #buffer_size frames.
+        def strict_buffer_size
+          true
+        end
+
         # For an audio input, reads one #buffer_size buffer of frames as an
         # Array of Numo::SFloat.
         #

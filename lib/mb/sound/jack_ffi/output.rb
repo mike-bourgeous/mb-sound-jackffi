@@ -4,6 +4,12 @@ module MB
       # Returned by JackFFI#output.  E.g. use JackFFI['my client'].output(channels: 2)
       # to get two output ports on the client.
       class Output < IOCommon
+        # Indicates to other MB::Sound code that this output can only handle
+        # writes of exactly #buffer_size frames.
+        def strict_buffer_size
+          true
+        end
+
         # Writes the given Array of data arrays (Numo::SFloat recommended for
         # audio ports).  The Array should contain one element for each output
         # port.
