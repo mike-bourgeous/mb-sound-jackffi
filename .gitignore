@@ -12,5 +12,3 @@
 /*.wav
 /spec/examples.txt
 Gemfile.lock
-.ruby-gemset
-.ruby-version

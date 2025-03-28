@@ -26,8 +26,8 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_development_dependency "rake", "~> 13.0"
-  spec.add_development_dependency 'pry', '~> 0.13.1'
-  spec.add_development_dependency 'pry-byebug', '~> 3.9.0'
+  spec.add_development_dependency 'pry', '~> 0.14.0'
+  spec.add_development_dependency 'pry-byebug', '~> 3.10.0'
   spec.add_development_dependency 'mb-util', '>= 0.1.14.usegit'
 
   spec.add_runtime_dependency 'numo-narray', '~> 0.9.1'
