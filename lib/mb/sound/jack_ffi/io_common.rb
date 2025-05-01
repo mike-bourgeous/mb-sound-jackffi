@@ -6,7 +6,7 @@ module MB
       class IOCommon
         extend Forwardable
 
-        def_delegators :@jack_ffi, :buffer_size, :rate
+        def_delegators :@jack_ffi, :buffer_size, :sample_rate
         attr_reader :channels, :ports, :jack_ffi
 
         # Called by JackFFI to initialize an input or output.  You generally

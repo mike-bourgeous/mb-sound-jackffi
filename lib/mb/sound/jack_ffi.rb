@@ -69,7 +69,7 @@ module MB
         @instances.reject! { |k, v| v == jack_ffi }
       end
 
-      attr_reader :client_name, :server_name, :buffer_size, :rate, :inputs, :outputs
+      attr_reader :client_name, :server_name, :buffer_size, :sample_rate, :inputs, :outputs
 
       # An optional object that responds to Logger-style methods like #info and
       # #error.
@@ -131,7 +131,7 @@ module MB
           end
 
           @buffer_size = Jack.jack_get_buffer_size(@client)
-          @rate = Jack.jack_get_sample_rate(@client)
+          @sample_rate = Jack.jack_get_sample_rate(@client)
           @zero = Numo::SFloat.zeros(@buffer_size).to_binary
 
           @process_handle = method(:process) # Assigned to variable to prevent GC
