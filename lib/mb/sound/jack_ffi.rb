@@ -173,6 +173,7 @@ module MB
       # +:port_names+ - A String (without a trailing underscore) to create
       #                 prefixed and numbered ports, or an Array of Strings to
       #                 create a list of ports directly by name.
+      # +:port_type+ - :audio for an audio port, :midi for a MIDI port.
       # +:connect+ - A String with a single port name like "client:port", a
       #              String with a client name like "system", an Array of port
       #              name strings like +["system:playback_1",
