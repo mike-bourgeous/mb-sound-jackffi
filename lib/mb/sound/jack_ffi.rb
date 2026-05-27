@@ -640,7 +640,7 @@ module MB
                 events = Array.new(count) do |t|
                   event = Jack::JackMidiEvent.new
                   result = Jack.jack_midi_event_get(event, buf, t)
-                  [event.time / @sample_rate, event.data]
+                  [event.time.to_f / @sample_rate, event.data]
                 end
 
                 queue.push(events)
