@@ -14,10 +14,12 @@ module MB
         # For an audio input, reads one #buffer_size buffer of frames as an
         # Array of Numo::SFloat.
         #
-        # For a MIDI input, reads one MIDI event for each port as an Array of
-        # [time: Float, data: String].  The time here is the offset within the
-        # audio buffer.  It is recommended to create only a single MIDI port
-        # per Input object, as this method blocks until *every* port has data.
+        # For a MIDI input, reads an Array of MIDI events for each port, with
+        # each event an Array of [time: Float, data: String].  The time here is
+        # the offset within the audio buffer.
+        #
+        # It is recommended to create only a single MIDI port per Input object,
+        # as this method blocks until *every* port has data.
         #
         # If +:blocking+ is true (the default), this method blocks until data
         # is available for every port.  If false, nil will be returned for any

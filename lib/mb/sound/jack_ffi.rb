@@ -635,10 +635,15 @@ module MB
               queue.push(Numo::SFloat.from_binary(buf.read_bytes(frames * 4)), true)
 
             when Jack::MIDI_TYPE
-              Jack.jack_midi_get_event_count(buf).times do |t|
-                event = Jack::JackMidiEvent.new
-                result = Jack.jack_midi_event_get(event, buf, t)
-                queue.push([event.time / @sample_rate, event.data]) if result == 0
+              count = Jack.jack_midi_get_event_count(buf)
+              if count > 0
+                events = Array.new(count) do |t|
+                  event = Jack::JackMidiEvent.new
+                  result = Jack.jack_midi_event_get(event, buf, t)
+                  [event.time / @sample_rate, event.data]
+                end
+
+                queue.push(events)
               end
 
             else
