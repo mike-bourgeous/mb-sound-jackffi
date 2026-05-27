@@ -15,10 +15,9 @@ module MB
         # Array of Numo::SFloat.
         #
         # For a MIDI input, reads one MIDI event for each port as an Array of
-        # [frame: Integer, data: String].  The frame here is the sample offset
-        # within the audio buffer.  It is recommended to create only a single
-        # MIDI port per Input object, as this method blocks until *every* port
-        # has data.
+        # [time: Float, data: String].  The time here is the offset within the
+        # audio buffer.  It is recommended to create only a single MIDI port
+        # per Input object, as this method blocks until *every* port has data.
         #
         # If +:blocking+ is true (the default), this method blocks until data
         # is available for every port.  If false, nil will be returned for any

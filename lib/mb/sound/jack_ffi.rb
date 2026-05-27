@@ -638,7 +638,7 @@ module MB
               Jack.jack_midi_get_event_count(buf).times do |t|
                 event = Jack::JackMidiEvent.new
                 result = Jack.jack_midi_event_get(event, buf, t)
-                queue.push([event.time, event.data]) if result == 0
+                queue.push([event.time / @sample_rate, event.data]) if result == 0
               end
 
             else
