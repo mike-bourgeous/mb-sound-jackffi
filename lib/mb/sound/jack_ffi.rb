@@ -71,6 +71,9 @@ module MB
 
       attr_reader :client_name, :server_name, :buffer_size, :sample_rate, :inputs, :outputs
 
+      # The time, in samples, at the start of the most recent frame/buffer.
+      attr_reader :current_frame
+
       # An optional object that responds to Logger-style methods like #info and
       # #error.
       attr_accessor :logger
@@ -109,6 +112,8 @@ module MB
         @init_mutex = Mutex.new
 
         @init_mutex.synchronize {
+          @current_frame = 0
+
           status = Jack::JackStatusWrapper.new
           @client = Jack.jack_client_open(
             client_name,
@@ -607,7 +612,7 @@ module MB
         @init_mutex&.synchronize {
           return unless @run && @client && @input_ports && @output_ports
 
-          start_frame = Jack.jack_last_frame_time(@client)
+          @current_frame = Jack.jack_last_frame_time(@client)
 
           @input_ports.each do |name, port_info|
             # FIXME: Avoid allocation in this function; use a buffer pool or something
@@ -630,11 +635,15 @@ module MB
               queue.push(Numo::SFloat.from_binary(buf.read_bytes(frames * 4)), true)
 
             when Jack::MIDI_TYPE
-              Jack.jack_midi_get_event_count(buf).times do |t|
-                event = Jack::JackMidiEvent.new
-                result = Jack.jack_midi_event_get(event, buf, t)
-                # TODO: push time with events
-                queue.push(event.data) if result == 0
+              count = Jack.jack_midi_get_event_count(buf)
+              if count > 0
+                events = Array.new(count) do |t|
+                  event = Jack::JackMidiEvent.new
+                  result = Jack.jack_midi_event_get(event, buf, t)
+                  [event.time.to_f / @sample_rate, event.data]
+                end
+
+                queue.push(events)
               end
 
             else
